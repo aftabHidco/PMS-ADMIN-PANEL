@@ -27,6 +27,7 @@
     "@coreui/react-chartjs": "^3.0.0",
     "@coreui/utils": "^2.0.2",
     "@popperjs/core": "^2.11.8",
+    "axios": "^1.13.2",
     "chart.js": "^4.5.1",
     "classnames": "^2.5.1",
     "core-js": "^3.46.0",
@@ -34,7 +35,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-redux": "^9.2.0",
-    "react-router-dom": "^7.9.5",
+    "react-router-dom": "^7.10.1",
     "redux": "5.0.1",
     "simplebar-react": "^3.3.2"
   },

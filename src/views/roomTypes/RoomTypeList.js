@@ -1,0 +1,237 @@
+// src/views/roomTypes/RoomTypeList.js
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  CCard,
+  CCardHeader,
+  CCardBody,
+  CButton,
+  CAlert,
+  CSpinner,
+  CTable,
+  CTableHead,
+  CTableRow,
+  CTableHeaderCell,
+  CTableBody,
+  CTableDataCell,
+  CFormInput,
+} from "@coreui/react";
+import { useAuth } from "../../auth/AuthProvider";
+import { useNavigate } from "react-router-dom";
+
+const RoomTypeList = () => {
+  const auth = useAuth();
+  const navigate = useNavigate();
+  const API_BASE = auth.API_BASE;
+
+  const [roomTypes, setRoomTypes] = useState([]);
+  const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Search, sorting, pagination
+  const [search, setSearch] = useState("");
+  const [sortField, setSortField] = useState("room_type_name");
+  const [sortDir, setSortDir] = useState("asc");
+  const [page, setPage] = useState(1);
+  const perPage = 10;
+
+  // Load properties
+  const loadProperties = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/properties?_perPage=500`, {
+        headers: { ...auth.getAuthHeader() },
+      });
+      const data = await res.json();
+      setProperties(data?.data || data);
+    } catch (err) {
+      console.error("Failed to load properties");
+    }
+  };
+
+  // Load room types
+  const loadRoomTypes = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/room-types?_perPage=500`, {
+        headers: { ...auth.getAuthHeader() },
+      });
+
+      const data = await res.json();
+      setRoomTypes(data?.data || data);
+    } catch (err) {
+      console.error("Failed to load room types");
+      setError("Failed to load room types");
+    }
+  };
+
+  useEffect(() => {
+    Promise.all([loadProperties(), loadRoomTypes()])
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Property lookup map
+  const propertyMap = useMemo(() => {
+    const map = {};
+    properties.forEach((p) => {
+      map[p.property_id] = p.property_name;
+    });
+    return map;
+  }, [properties]);
+
+  const getPropertyName = (id) => propertyMap[id] || "-";
+
+  // Search
+  const filtered = useMemo(() => {
+    return roomTypes.filter((rt) => {
+      const text = `${rt.room_type_name} ${rt.room_type_code} ${getPropertyName(rt.property_id)}`.toLowerCase();
+      return text.includes(search.toLowerCase());
+    });
+  }, [search, roomTypes, propertyMap]);
+
+  // Sort
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      let A = (a[sortField] || "").toString().toLowerCase();
+      let B = (b[sortField] || "").toString().toLowerCase();
+      return sortDir === "asc" ? (A > B ? 1 : -1) : (A < B ? 1 : -1);
+    });
+  }, [filtered, sortField, sortDir]);
+
+  // Pagination
+  const totalPages = Math.ceil(sorted.length / perPage);
+  const paginated = sorted.slice((page - 1) * perPage, page * perPage);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
+
+  // Delete
+  const deleteRoomType = async (id) => {
+    if (!window.confirm("Delete this room type?")) return;
+
+    const res = await fetch(`${API_BASE}/room-types/${id}`, {
+      method: "DELETE",
+      headers: { ...auth.getAuthHeader() },
+    });
+
+    if (!res.ok) {
+      alert("Failed to delete");
+      return;
+    }
+
+    loadRoomTypes();
+  };
+
+  if (loading) return <CSpinner className="m-4" />;
+
+  return (
+    <CCard>
+      <CCardHeader className="d-flex justify-content-between align-items-center">
+        <h4>Room Types</h4>
+        <CButton color="primary" onClick={() => navigate("/room-types/create")}>
+          + Add Room Type
+        </CButton>
+      </CCardHeader>
+
+      <CCardBody>
+        {error && <CAlert color="danger">{error}</CAlert>}
+
+        <CFormInput
+          placeholder="Search room types..."
+          className="mb-3"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
+
+        <CTable bordered hover responsive>
+          <CTableHead color="dark">
+            <CTableRow>
+              <CTableHeaderCell>#</CTableHeaderCell>
+
+              <CTableHeaderCell onClick={() => handleSort("room_type_name")}>
+                Room Type {sortField === "room_type_name" && (sortDir === "asc" ? "↑" : "↓")}
+              </CTableHeaderCell>
+
+              <CTableHeaderCell onClick={() => handleSort("room_type_code")}>
+                Code {sortField === "room_type_code" && (sortDir === "asc" ? "↑" : "↓")}
+              </CTableHeaderCell>
+
+              <CTableHeaderCell>Property</CTableHeaderCell>
+              <CTableHeaderCell>Occupancy</CTableHeaderCell>
+              <CTableHeaderCell>Qty</CTableHeaderCell>
+              <CTableHeaderCell>Inventory Mode</CTableHeaderCell>
+
+              <CTableHeaderCell>Actions</CTableHeaderCell>
+            </CTableRow>
+          </CTableHead>
+
+          <CTableBody>
+            {paginated.length === 0 ? (
+              <CTableRow>
+                <CTableDataCell colSpan={8} className="text-center">
+                  No room types found
+                </CTableDataCell>
+              </CTableRow>
+            ) : (
+              paginated.map((rt, index) => (
+                <CTableRow key={rt.room_type_id}>
+                  <CTableDataCell>{(page - 1) * perPage + index + 1}</CTableDataCell>
+                  <CTableDataCell>{rt.room_type_name}</CTableDataCell>
+                  <CTableDataCell>{rt.room_type_code || "-"}</CTableDataCell>
+                  <CTableDataCell>{getPropertyName(rt.property_id)}</CTableDataCell>
+                  <CTableDataCell>
+                    {rt.base_occupancy} / {rt.max_occupancy}
+                  </CTableDataCell>
+                  <CTableDataCell>{rt.qty}</CTableDataCell>
+                  <CTableDataCell>{rt.inventory_mode}</CTableDataCell>
+
+                  <CTableDataCell>
+                    <CButton
+                      size="sm"
+                      color="info"
+                      className="me-2"
+                      onClick={() => navigate(`/room-types/${rt.room_type_id}/edit/`)}
+                    >
+                      Edit
+                    </CButton>
+
+                    <CButton
+                      size="sm"
+                      color="danger"
+                      onClick={() => deleteRoomType(rt.room_type_id)}
+                    >
+                      Delete
+                    </CButton>
+                  </CTableDataCell>
+                </CTableRow>
+              ))
+            )}
+          </CTableBody>
+        </CTable>
+
+        {/* Pagination */}
+        <div className="d-flex justify-content-between mt-3">
+          <CButton disabled={page === 1} onClick={() => setPage(page - 1)}>
+            Previous
+          </CButton>
+
+          <span>Page {page} of {totalPages}</span>
+
+          <CButton disabled={page === totalPages} onClick={() => setPage(page + 1)}>
+            Next
+          </CButton>
+        </div>
+
+      </CCardBody>
+    </CCard>
+  );
+};
+
+export default RoomTypeList;

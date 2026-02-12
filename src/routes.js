@@ -1,5 +1,6 @@
 import React from 'react'
 
+
 const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
 const Colors = React.lazy(() => import('./views/theme/colors/Colors'))
 const Typography = React.lazy(() => import('./views/theme/typography/Typography'))
@@ -51,6 +52,48 @@ const Toasts = React.lazy(() => import('./views/notifications/toasts/Toasts'))
 
 const Widgets = React.lazy(() => import('./views/widgets/Widgets'))
 
+//user
+
+const UsersList = React.lazy(() => import('./views/users/UsersList'))
+const UserCreate = React.lazy(() => import('./views/users/UserCreate'))
+const UserEdit = React.lazy(() => import('./views/users/UserEdit'))
+
+//role
+
+const RoleList = React.lazy(() => import('./views/roles/RoleList'))
+const RoleCreate = React.lazy(() => import('./views/roles/RoleCreate'))
+const RoleEdit = React.lazy(() => import('./views/roles/RoleEdit'))
+
+//admin
+
+const AdminList = React.lazy(() => import('./views/admin/AdminList'))
+const AdminCreate = React.lazy(() => import('./views/admin/AdminCreate'))
+const AdminEdit = React.lazy(() => import('./views/admin/AdminEdit'))
+
+//property
+
+const PropertyList = React.lazy(() => import('./views/property/PropertyList'))
+const PropertyCreate = React.lazy(() => import('./views/property/PropertyCreate'))
+const PropertyEdit = React.lazy(() => import('./views/property/PropertyEdit'))
+
+//Room Type
+const RoomTypeList = React.lazy(() => import('./views/roomTypes/RoomTypeList'))
+const RoomTypeCreate = React.lazy(() => import('./views/roomTypes/RoomTypeCreate'))
+const RoomTypeEdit = React.lazy(() => import('./views/roomTypes/RoomTypeEdit'))
+
+//season
+const SeasonList = React.lazy(() => import('./views/seasons/SeasonList'))
+const SeasonCreate = React.lazy(() => import('./views/seasons/SeasonCreate'))
+const SeasonEdit = React.lazy(() => import('./views/seasons/SeasonEdit'))
+
+//CANCELLATION POLICY
+
+const CancellationPolicyList = React.lazy(() => import('./views/cancellation/CancellationPolicyList'));
+const CancellationPolicyCreate = React.lazy(() => import('./views/cancellation/CancellationPolicyCreate'));
+const CancellationPolicyEdit = React.lazy(() => import('./views/cancellation/CancellationPolicyEdit'));
+//BOOKING
+const CreateBooking = React.lazy(() => import('./views/bookings/CreateBooking'))
+
 const routes = [
   { path: '/', exact: true, name: 'Home' },
   { path: '/dashboard', name: 'Dashboard', element: Dashboard },
@@ -97,6 +140,40 @@ const routes = [
   { path: '/notifications/modals', name: 'Modals', element: Modals },
   { path: '/notifications/toasts', name: 'Toasts', element: Toasts },
   { path: '/widgets', name: 'Widgets', element: Widgets },
+
+  // USERS
+  { path: '/users', exact: true, name: 'Users', element: UsersList },
+  { path: '/users/create', exact: true, name: 'Create User', element: UserCreate },
+  { path: '/users/:id', exact: true, name: 'Edit User', element: UserEdit },
+  //ROLES
+  { path: '/roles', name: 'Roles', element: RoleList },
+  { path: '/roles/create', name: 'Create Role', element: RoleCreate },
+  { path: '/roles/:id/edit', name: 'Edit Role', element: RoleEdit },
+  //ADMIN
+  { path: '/admins',name: 'Admin',element: AdminList,},
+  { path: '/admins/create',name: 'Create Admin',element: AdminCreate,},
+  { path: '/admins/:id/edit', name: 'Edit Admin', element: AdminEdit,},
+  //PROPERTY
+  { path: '/properties',name: 'properties',element: PropertyList,},
+  { path: '/properties/create',name: 'Create properties',element: PropertyCreate,},
+  { path: '/properties/:id/edit', name: 'Edit properties', element: PropertyEdit,},
+  //ROOM TYPE
+  { path: '/room-types',name: 'Room Types',element: RoomTypeList,},
+  { path: '/room-types/create',name: 'Create Room Types',element: RoomTypeCreate,},
+  { path: '/room-types/:id/edit', name: 'Edit Room Types', element: RoomTypeEdit,},
+  //SEASON
+   { path: '/seasons',name: 'season',element: SeasonList,},
+  { path: '/seasons/create',name: 'Create season',element: SeasonCreate,},
+  { path: '/seasons/:id/edit', name: 'Edit season', element: SeasonEdit,},
+  //CANCELLATION
+  {path: "/cancellation", name: "Cancellation Policies",element: CancellationPolicyList,},
+
+  {path: "/cancellation/create", name: "Create Cancellation Policy", element: CancellationPolicyCreate,},
+
+  {path: "/cancellation/:id/edit",name: "Edit Cancellation Policy",element: CancellationPolicyEdit,},
+
+  {path: "/bookings/create",name: "Create Booking",element: CreateBooking,},
+
 ]
 
 export default routes
