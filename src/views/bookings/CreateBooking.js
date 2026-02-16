@@ -50,6 +50,7 @@ const CreateBooking = () => {
     email: "",
     phone: "",
   });
+  const today = new Date().toISOString().split("T")[0];
 
   // ---------------- LOAD PROPERTIES (ROLE BASED) ----------------
   useEffect(() => {
@@ -154,8 +155,10 @@ const CreateBooking = () => {
     setSelectedOption(null);
 
     const { property_id, start_date, end_date, guests, rooms } = booking;
+    const numGuests = Number(guests);
+    const numRooms = Number(rooms);
 
-    if (!property_id || !start_date || !end_date || !guests || !rooms) {
+    if (!property_id || !start_date || !end_date || !numGuests || !numRooms) {
       setError("Fill all booking details");
       return;
     }
@@ -164,8 +167,10 @@ const CreateBooking = () => {
       property_id,
       checkin_date: start_date,
       checkout_date: end_date,
-      guests,
-      rooms,
+      num_guests: String(numGuests),
+      num_rooms: String(numRooms),
+      guests: String(numGuests),
+      rooms: String(numRooms),
     }).toString();
 
     const res = await fetch(`${API_BASE}/availability?${query}`, {
@@ -191,24 +196,51 @@ const CreateBooking = () => {
       return;
     }
 
-    const res = await fetch(`${API_BASE}/bookings`, {
+    const pricing = selectedOption?.pricing || {};
+    const payload = {
+      user_id: Number(user.user_id),
+      property_id: Number(booking.property_id),
+      checkin_date: booking.start_date,
+      checkout_date: booking.end_date,
+      num_guests: Number(booking.guests),
+      tax_amount: Number(pricing.tax_amount || 0),
+      pricing_summary: {
+        base_price: Number(pricing.base_price || 0),
+        tax_amount: Number(pricing.tax_amount || 0),
+        grand_total: Number(pricing.total_price || 0),
+        taxes: (pricing.taxes || []).map((tax) => ({
+          tax_id: Number(tax.tax_id),
+          tax_name: tax.tax_name,
+          tax_code: tax.tax_code,
+          percentage: Number(tax.percentage),
+          amount: Number(tax.amount),
+        })),
+        breakup: (pricing.breakup || []).map((item) => ({
+          room_type_id: Number(item.room_type_id),
+          qty: Number(item.qty),
+          price_per_night: Number(item.price_per_night),
+          subtotal: Number(item.subtotal),
+        })),
+      },
+    };
+
+    const res = await fetch(`http://127.0.0.1:4000/api/bookings`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...auth.getAuthHeader(),
       },
-      body: JSON.stringify({
-        user_id: user.user_id,
-        ...booking,
-      }),
+      body: JSON.stringify(payload),
     });
+    const data = await res.json();
 
-    if (!res.ok) {
-      setError("Booking failed");
+    if (!res.ok || !data?.success) {
+      setError(data?.message || "Booking failed");
       return;
     }
 
-    setSuccess("Booking created successfully");
+    const baseUrl = window.location.href.split("#")[0];
+    window.location.replace(`${baseUrl}#/bookings`);
   };
 
   // ---------------- UI ----------------
@@ -296,6 +328,7 @@ const CreateBooking = () => {
             <CRow className="mb-3">
               <CCol md={3}>
                 <CFormInput type="date" label="Check-in"
+                  min={today}
                   value={booking.start_date}
                   onChange={e => setBooking({ ...booking, start_date: e.target.value })}
                 />
@@ -303,6 +336,7 @@ const CreateBooking = () => {
 
               <CCol md={3}>
                 <CFormInput type="date" label="Check-out"
+                  min={booking.start_date || today}
                   value={booking.end_date}
                   onChange={e => setBooking({ ...booking, end_date: e.target.value })}
                 />
@@ -366,6 +400,25 @@ const CreateBooking = () => {
               </div>
             ))}
 
+            <hr />
+            <div className="d-flex justify-content-between">
+              <span>Base Price</span>
+              <span>₹{opt.pricing.base_price}</span>
+            </div>
+            <div className="d-flex justify-content-between">
+              <span>Total Tax</span>
+              <span>₹{opt.pricing.tax_amount}</span>
+            </div>
+            {Array.isArray(opt.pricing.taxes) && opt.pricing.taxes.length > 0 && (
+              <div className="mt-2">
+                {opt.pricing.taxes.map((tax, taxIdx) => (
+                  <div key={taxIdx} className="d-flex justify-content-between">
+                    <span>{tax.tax_name} ({tax.percentage}%)</span>
+                    <span>₹{tax.amount}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <hr />
             <div className="d-flex justify-content-between">
               <strong>Total Price</strong>
