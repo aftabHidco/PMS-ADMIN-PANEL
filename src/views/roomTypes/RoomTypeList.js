@@ -1,10 +1,10 @@
 // src/views/roomTypes/RoomTypeList.js
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from 'react'
+import { cilChevronLeft, cilChevronRight, cilPencil, cilPlus, cilTrash } from '@coreui/icons'
 import {
   CCard,
   CCardHeader,
   CCardBody,
-  CButton,
   CAlert,
   CSpinner,
   CTable,
@@ -14,127 +14,131 @@ import {
   CTableBody,
   CTableDataCell,
   CFormInput,
-} from "@coreui/react";
-import { useAuth } from "../../auth/AuthProvider";
-import { useNavigate } from "react-router-dom";
+} from '@coreui/react'
+import { useAuth } from '../../auth/AuthProvider'
+import { useNavigate } from 'react-router-dom'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const RoomTypeList = () => {
-  const auth = useAuth();
-  const navigate = useNavigate();
-  const API_BASE = auth.API_BASE;
+  const auth = useAuth()
+  const navigate = useNavigate()
+  const API_BASE = auth.API_BASE
 
-  const [roomTypes, setRoomTypes] = useState([]);
-  const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [roomTypes, setRoomTypes] = useState([])
+  const [properties, setProperties] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   // Search, sorting, pagination
-  const [search, setSearch] = useState("");
-  const [sortField, setSortField] = useState("room_type_name");
-  const [sortDir, setSortDir] = useState("asc");
-  const [page, setPage] = useState(1);
-  const perPage = 10;
+  const [search, setSearch] = useState('')
+  const [sortField, setSortField] = useState('room_type_name')
+  const [sortDir, setSortDir] = useState('asc')
+  const [page, setPage] = useState(1)
+  const perPage = 10
 
   // Load properties
   const loadProperties = async () => {
     try {
       const res = await fetch(`${API_BASE}/properties?_perPage=500`, {
         headers: { ...auth.getAuthHeader() },
-      });
-      const data = await res.json();
-      setProperties(data?.data || data);
+      })
+      const data = await res.json()
+      setProperties(data?.data || data)
     } catch (err) {
-      console.error("Failed to load properties");
+      console.error('Failed to load properties')
     }
-  };
+  }
 
   // Load room types
   const loadRoomTypes = async () => {
     try {
       const res = await fetch(`${API_BASE}/room-types?_perPage=500`, {
         headers: { ...auth.getAuthHeader() },
-      });
+      })
 
-      const data = await res.json();
-      setRoomTypes(data?.data || data);
+      const data = await res.json()
+      setRoomTypes(data?.data || data)
     } catch (err) {
-      console.error("Failed to load room types");
-      setError("Failed to load room types");
+      console.error('Failed to load room types')
+      setError('Failed to load room types')
     }
-  };
+  }
 
   useEffect(() => {
-    Promise.all([loadProperties(), loadRoomTypes()])
-      .finally(() => setLoading(false));
-  }, []);
+    Promise.all([loadProperties(), loadRoomTypes()]).finally(() => setLoading(false))
+  }, [])
 
   // Property lookup map
   const propertyMap = useMemo(() => {
-    const map = {};
+    const map = {}
     properties.forEach((p) => {
-      map[p.property_id] = p.property_name;
-    });
-    return map;
-  }, [properties]);
+      map[p.property_id] = p.property_name
+    })
+    return map
+  }, [properties])
 
-  const getPropertyName = (id) => propertyMap[id] || "-";
+  const getPropertyName = (id) => propertyMap[id] || '-'
 
   // Search
   const filtered = useMemo(() => {
     return roomTypes.filter((rt) => {
-      const text = `${rt.room_type_name} ${rt.room_type_code} ${getPropertyName(rt.property_id)}`.toLowerCase();
-      return text.includes(search.toLowerCase());
-    });
-  }, [search, roomTypes, propertyMap]);
+      const text =
+        `${rt.room_type_name} ${rt.room_type_code} ${getPropertyName(rt.property_id)}`.toLowerCase()
+      return text.includes(search.toLowerCase())
+    })
+  }, [search, roomTypes, propertyMap])
 
   // Sort
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      let A = (a[sortField] || "").toString().toLowerCase();
-      let B = (b[sortField] || "").toString().toLowerCase();
-      return sortDir === "asc" ? (A > B ? 1 : -1) : (A < B ? 1 : -1);
-    });
-  }, [filtered, sortField, sortDir]);
+      let A = (a[sortField] || '').toString().toLowerCase()
+      let B = (b[sortField] || '').toString().toLowerCase()
+      return sortDir === 'asc' ? (A > B ? 1 : -1) : A < B ? 1 : -1
+    })
+  }, [filtered, sortField, sortDir])
 
   // Pagination
-  const totalPages = Math.ceil(sorted.length / perPage);
-  const paginated = sorted.slice((page - 1) * perPage, page * perPage);
+  const totalPages = Math.ceil(sorted.length / perPage)
+  const paginated = sorted.slice((page - 1) * perPage, page * perPage)
 
   const handleSort = (field) => {
     if (sortField === field) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
     } else {
-      setSortField(field);
-      setSortDir("asc");
+      setSortField(field)
+      setSortDir('asc')
     }
-  };
+  }
 
   // Delete
   const deleteRoomType = async (id) => {
-    if (!window.confirm("Delete this room type?")) return;
+    if (!window.confirm('Delete this room type?')) return
 
     const res = await fetch(`${API_BASE}/room-types/${id}`, {
-      method: "DELETE",
+      method: 'DELETE',
       headers: { ...auth.getAuthHeader() },
-    });
+    })
 
     if (!res.ok) {
-      alert("Failed to delete");
-      return;
+      alert('Failed to delete')
+      return
     }
 
-    loadRoomTypes();
-  };
+    loadRoomTypes()
+  }
 
-  if (loading) return <CSpinner className="m-4" />;
+  if (loading) return <CSpinner className="m-4" />
 
   return (
     <CCard>
       <CCardHeader className="d-flex justify-content-between align-items-center">
         <h4>Room Types</h4>
-        <CButton color="primary" onClick={() => navigate("/room-types/create")}>
-          + Add Room Type
-        </CButton>
+        <IconOnlyButton
+          icon={cilPlus}
+          tone="primary"
+          label="Add Room Type"
+          onClick={() => navigate('/room-types/create')}
+        />
       </CCardHeader>
 
       <CCardBody>
@@ -145,8 +149,8 @@ const RoomTypeList = () => {
           className="mb-3"
           value={search}
           onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
+            setSearch(e.target.value)
+            setPage(1)
           }}
         />
 
@@ -155,12 +159,12 @@ const RoomTypeList = () => {
             <CTableRow>
               <CTableHeaderCell>#</CTableHeaderCell>
 
-              <CTableHeaderCell onClick={() => handleSort("room_type_name")}>
-                Room Type {sortField === "room_type_name" && (sortDir === "asc" ? "↑" : "↓")}
+              <CTableHeaderCell onClick={() => handleSort('room_type_name')}>
+                Room Type {sortField === 'room_type_name' && (sortDir === 'asc' ? '↑' : '↓')}
               </CTableHeaderCell>
 
-              <CTableHeaderCell onClick={() => handleSort("room_type_code")}>
-                Code {sortField === "room_type_code" && (sortDir === "asc" ? "↑" : "↓")}
+              <CTableHeaderCell onClick={() => handleSort('room_type_code')}>
+                Code {sortField === 'room_type_code' && (sortDir === 'asc' ? '↑' : '↓')}
               </CTableHeaderCell>
 
               <CTableHeaderCell>Property</CTableHeaderCell>
@@ -184,7 +188,7 @@ const RoomTypeList = () => {
                 <CTableRow key={rt.room_type_id}>
                   <CTableDataCell>{(page - 1) * perPage + index + 1}</CTableDataCell>
                   <CTableDataCell>{rt.room_type_name}</CTableDataCell>
-                  <CTableDataCell>{rt.room_type_code || "-"}</CTableDataCell>
+                  <CTableDataCell>{rt.room_type_code || '-'}</CTableDataCell>
                   <CTableDataCell>{getPropertyName(rt.property_id)}</CTableDataCell>
                   <CTableDataCell>
                     {rt.base_occupancy} / {rt.max_occupancy}
@@ -193,22 +197,22 @@ const RoomTypeList = () => {
                   <CTableDataCell>{rt.inventory_mode}</CTableDataCell>
 
                   <CTableDataCell>
-                    <CButton
+                    <IconOnlyButton
+                      icon={cilPencil}
+                      tone="info"
                       size="sm"
-                      color="info"
                       className="me-2"
+                      label="Edit Room Type"
                       onClick={() => navigate(`/room-types/${rt.room_type_id}/edit/`)}
-                    >
-                      Edit
-                    </CButton>
+                    />
 
-                    <CButton
+                    <IconOnlyButton
+                      icon={cilTrash}
+                      tone="danger"
                       size="sm"
-                      color="danger"
+                      label="Delete Room Type"
                       onClick={() => deleteRoomType(rt.room_type_id)}
-                    >
-                      Delete
-                    </CButton>
+                    />
                   </CTableDataCell>
                 </CTableRow>
               ))
@@ -218,20 +222,27 @@ const RoomTypeList = () => {
 
         {/* Pagination */}
         <div className="d-flex justify-content-between mt-3">
-          <CButton disabled={page === 1} onClick={() => setPage(page - 1)}>
-            Previous
-          </CButton>
+          <IconOnlyButton
+            icon={cilChevronLeft}
+            label="Previous Page"
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}
+          />
 
-          <span>Page {page} of {totalPages}</span>
+          <span>
+            Page {page} of {totalPages}
+          </span>
 
-          <CButton disabled={page === totalPages} onClick={() => setPage(page + 1)}>
-            Next
-          </CButton>
+          <IconOnlyButton
+            icon={cilChevronRight}
+            label="Next Page"
+            disabled={page === totalPages}
+            onClick={() => setPage(page + 1)}
+          />
         </div>
-
       </CCardBody>
     </CCard>
-  );
-};
+  )
+}
 
-export default RoomTypeList;
+export default RoomTypeList

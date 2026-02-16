@@ -1,21 +1,16 @@
 // src/views/roomTypes/RoomTypeImages.js
-import React, { useEffect, useState } from "react";
-import {
-  CButton,
-  CFormInput,
-  CRow,
-  CCol,
-  CCard,
-  CCardBody
-} from "@coreui/react";
-import { useAuth } from "../../auth/AuthProvider";
+import React, { useEffect, useState } from 'react'
+import { cilCloudUpload, cilTrash, cilXCircle } from '@coreui/icons'
+import { CFormInput, CRow, CCol, CCard, CCardBody } from '@coreui/react'
+import { useAuth } from '../../auth/AuthProvider'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const RoomTypeImages = ({ roomTypeId }) => {
-  const auth = useAuth();
-  const API_BASE = auth.API_BASE;
+  const auth = useAuth()
+  const API_BASE = auth.API_BASE
 
-  const [uploadedImages, setUploadedImages] = useState([]);
-  const [selectedImages, setSelectedImages] = useState([]);
+  const [uploadedImages, setUploadedImages] = useState([])
+  const [selectedImages, setSelectedImages] = useState([])
 
   // ------------------------------------------------
   // Load existing room-type images from backend
@@ -24,88 +19,85 @@ const RoomTypeImages = ({ roomTypeId }) => {
     try {
       const res = await fetch(`${API_BASE}/room-types/${roomTypeId}/images`, {
         headers: auth.getAuthHeader(),
-      });
+      })
 
-      const data = await res.json();
+      const data = await res.json()
 
-      const list = Array.isArray(data) ? data : data.data;
-      setUploadedImages(Array.isArray(list) ? list : []);
-
+      const list = Array.isArray(data) ? data : data.data
+      setUploadedImages(Array.isArray(list) ? list : [])
     } catch (err) {
-      console.error("Failed to load images", err);
-      setUploadedImages([]);
+      console.error('Failed to load images', err)
+      setUploadedImages([])
     }
-  };
+  }
 
   useEffect(() => {
-    loadImages();
-  }, [roomTypeId]);
+    loadImages()
+  }, [roomTypeId])
 
   // ------------------------------------------------
   // Select images (Preview before upload)
   // ------------------------------------------------
   const handleSelectImages = (e) => {
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files)
     const previews = files.map((file) => ({
       file,
       preview: URL.createObjectURL(file),
-    }));
+    }))
 
-    setSelectedImages((prev) => [...prev, ...previews]);
-  };
+    setSelectedImages((prev) => [...prev, ...previews])
+  }
 
   // Remove selected preview before uploading
   const removeSelectedImage = (index) => {
-    const updated = [...selectedImages];
-    updated.splice(index, 1);
-    setSelectedImages(updated);
-  };
+    const updated = [...selectedImages]
+    updated.splice(index, 1)
+    setSelectedImages(updated)
+  }
 
   // ------------------------------------------------
   // Upload selected images
   // ------------------------------------------------
   const uploadSelectedImages = async () => {
     if (selectedImages.length === 0) {
-      alert("Please select images first!");
-      return;
+      alert('Please select images first!')
+      return
     }
 
-    const formData = new FormData();
-    selectedImages.forEach((img) => formData.append("images", img.file));
+    const formData = new FormData()
+    selectedImages.forEach((img) => formData.append('images', img.file))
 
     try {
       await fetch(`${API_BASE}/room-types/${roomTypeId}/images`, {
-        method: "POST",
+        method: 'POST',
         headers: auth.getAuthHeader(),
         body: formData,
-      });
+      })
 
-      setSelectedImages([]);
-      loadImages();
-
+      setSelectedImages([])
+      loadImages()
     } catch (err) {
-      console.error("Upload error:", err);
+      console.error('Upload error:', err)
     }
-  };
+  }
 
   // ------------------------------------------------
   // Delete image (Correct API route)
   // ------------------------------------------------
   const deleteImage = async (imageId) => {
-    if (!window.confirm("Delete this image?")) return;
+    if (!window.confirm('Delete this image?')) return
 
     try {
       await fetch(`${API_BASE}/room-types/${roomTypeId}/images/${imageId}`, {
-        method: "DELETE",
+        method: 'DELETE',
         headers: auth.getAuthHeader(),
-      });
+      })
 
-      loadImages();
-
+      loadImages()
     } catch (err) {
-      console.error("Delete error:", err);
+      console.error('Delete error:', err)
     }
-  };
+  }
 
   return (
     <CCard className="mt-3">
@@ -127,29 +119,33 @@ const RoomTypeImages = ({ roomTypeId }) => {
                     src={img.preview}
                     alt="preview"
                     style={{
-                      width: "100%",
+                      width: '100%',
                       height: 120,
-                      objectFit: "cover",
+                      objectFit: 'cover',
                       borderRadius: 6,
-                      border: "2px solid #0d6efd"
+                      border: '2px solid #0d6efd',
                     }}
                   />
 
-                  <CButton
-                    color="danger"
+                  <IconOnlyButton
+                    icon={cilXCircle}
+                    tone="danger"
                     size="sm"
                     className="mt-2 w-100"
+                    label="Remove Selected Image"
                     onClick={() => removeSelectedImage(idx)}
-                  >
-                    Remove
-                  </CButton>
+                  />
                 </CCol>
               ))}
             </CRow>
 
-            <CButton color="primary" className="mt-2" onClick={uploadSelectedImages}>
-              Upload Selected Images
-            </CButton>
+            <IconOnlyButton
+              icon={cilCloudUpload}
+              tone="primary"
+              className="mt-2"
+              label="Upload Selected Images"
+              onClick={uploadSelectedImages}
+            />
           </>
         )}
 
@@ -164,28 +160,27 @@ const RoomTypeImages = ({ roomTypeId }) => {
                 src={img.image_url}
                 alt=""
                 style={{
-                  width: "100%",
+                  width: '100%',
                   height: 120,
-                  objectFit: "cover",
-                  borderRadius: 6
+                  objectFit: 'cover',
+                  borderRadius: 6,
                 }}
               />
 
-              <CButton
-                color="danger"
+              <IconOnlyButton
+                icon={cilTrash}
+                tone="danger"
                 size="sm"
                 className="mt-2 w-100"
+                label="Delete Image"
                 onClick={() => deleteImage(img.image_id)}
-              >
-                Delete
-              </CButton>
+              />
             </CCol>
           ))}
         </CRow>
-
       </CCardBody>
     </CCard>
-  );
-};
+  )
+}
 
-export default RoomTypeImages;
+export default RoomTypeImages

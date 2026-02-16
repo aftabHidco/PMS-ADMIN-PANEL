@@ -1,44 +1,53 @@
 // src/views/seasons/SeasonEdit.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react'
+import { cilSave } from '@coreui/icons'
 import {
-  CCard, CCardHeader, CCardBody, CForm, CFormInput,
-  CFormSelect, CButton, CAlert, CRow, CCol
-} from "@coreui/react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../../auth/AuthProvider";
+  CCard,
+  CCardHeader,
+  CCardBody,
+  CForm,
+  CFormInput,
+  CFormSelect,
+  CAlert,
+  CRow,
+  CCol,
+} from '@coreui/react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../auth/AuthProvider'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 // ✅ Month label + value (same as create)
 const MONTHS = [
-  { label: "January", value: "01" },
-  { label: "February", value: "02" },
-  { label: "March", value: "03" },
-  { label: "April", value: "04" },
-  { label: "May", value: "05" },
-  { label: "June", value: "06" },
-  { label: "July", value: "07" },
-  { label: "August", value: "08" },
-  { label: "September", value: "09" },
-  { label: "October", value: "10" },
-  { label: "November", value: "11" },
-  { label: "December", value: "12" },
-];
+  { label: 'January', value: '01' },
+  { label: 'February', value: '02' },
+  { label: 'March', value: '03' },
+  { label: 'April', value: '04' },
+  { label: 'May', value: '05' },
+  { label: 'June', value: '06' },
+  { label: 'July', value: '07' },
+  { label: 'August', value: '08' },
+  { label: 'September', value: '09' },
+  { label: 'October', value: '10' },
+  { label: 'November', value: '11' },
+  { label: 'December', value: '12' },
+]
 
 const SeasonEdit = () => {
-  const { id } = useParams();
-  const auth = useAuth();
-  const navigate = useNavigate();
-  const API_BASE = auth.API_BASE;
+  const { id } = useParams()
+  const auth = useAuth()
+  const navigate = useNavigate()
+  const API_BASE = auth.API_BASE
 
-  const [properties, setProperties] = useState([]);
-  const [error, setError] = useState("");
+  const [properties, setProperties] = useState([])
+  const [error, setError] = useState('')
 
   const [form, setForm] = useState({
-    property_id: "",
-    season_name: "",
-    start_date: "", // "01".."12"
-    end_date: "",
+    property_id: '',
+    season_name: '',
+    start_date: '', // "01".."12"
+    end_date: '',
     is_peak: false,
-  });
+  })
 
   // -------------------------
   // LOAD PROPERTIES
@@ -48,8 +57,8 @@ const SeasonEdit = () => {
       headers: auth.getAuthHeader(),
     })
       .then((res) => res.json())
-      .then((data) => setProperties(data.data || []));
-  }, []);
+      .then((data) => setProperties(data.data || []))
+  }, [])
 
   // -------------------------
   // LOAD SEASON DETAILS
@@ -66,39 +75,38 @@ const SeasonEdit = () => {
           start_date: data.start_date, // already "01".."12"
           end_date: data.end_date,
           is_peak: data.is_peak,
-        });
+        })
       })
-      .catch(() => setError("Failed to load season"));
-  }, [id]);
+      .catch(() => setError('Failed to load season'))
+  }, [id])
 
-  const handleChange = (key, value) =>
-    setForm({ ...form, [key]: value });
+  const handleChange = (key, value) => setForm({ ...form, [key]: value })
 
   // -------------------------
   // UPDATE SEASON
   // -------------------------
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
+    e.preventDefault()
+    setError('')
 
     const res = await fetch(`${API_BASE}/seasons/${id}`, {
-      method: "PUT",
+      method: 'PUT',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         ...auth.getAuthHeader(),
       },
       body: JSON.stringify(form),
-    });
+    })
 
-    const data = await res.json();
+    const data = await res.json()
 
     if (!res.ok) {
-      setError(data.error || data.message || "Failed to update season");
-      return;
+      setError(data.error || data.message || 'Failed to update season')
+      return
     }
 
-    navigate("/seasons");
-  };
+    navigate('/seasons')
+  }
 
   return (
     <CCard>
@@ -110,14 +118,13 @@ const SeasonEdit = () => {
         {error && <CAlert color="danger">{error}</CAlert>}
 
         <CForm onSubmit={handleSubmit}>
-
           {/* Property + Name */}
           <CRow className="mb-3">
             <CCol md={6}>
               <CFormSelect
                 label="Property"
                 value={form.property_id}
-                onChange={(e) => handleChange("property_id", e.target.value)}
+                onChange={(e) => handleChange('property_id', e.target.value)}
               >
                 <option value="">Select Property</option>
                 {properties.map((p) => (
@@ -132,7 +139,7 @@ const SeasonEdit = () => {
               <CFormInput
                 label="Season Name"
                 value={form.season_name}
-                onChange={(e) => handleChange("season_name", e.target.value)}
+                onChange={(e) => handleChange('season_name', e.target.value)}
               />
             </CCol>
           </CRow>
@@ -143,7 +150,7 @@ const SeasonEdit = () => {
               <CFormSelect
                 label="Start Month"
                 value={form.start_date}
-                onChange={(e) => handleChange("start_date", e.target.value)}
+                onChange={(e) => handleChange('start_date', e.target.value)}
               >
                 <option value="">Select Month</option>
                 {MONTHS.map((m) => (
@@ -158,7 +165,7 @@ const SeasonEdit = () => {
               <CFormSelect
                 label="End Month"
                 value={form.end_date}
-                onChange={(e) => handleChange("end_date", e.target.value)}
+                onChange={(e) => handleChange('end_date', e.target.value)}
               >
                 <option value="">Select Month</option>
                 {MONTHS.map((m) => (
@@ -176,9 +183,7 @@ const SeasonEdit = () => {
               <CFormSelect
                 label="Season Type"
                 value={form.is_peak}
-                onChange={(e) =>
-                  handleChange("is_peak", e.target.value === "true")
-                }
+                onChange={(e) => handleChange('is_peak', e.target.value === 'true')}
               >
                 <option value="false">Normal Season</option>
                 <option value="true">Peak Season</option>
@@ -186,13 +191,13 @@ const SeasonEdit = () => {
             </CCol>
           </CRow>
 
-          <CButton type="submit" color="primary">
-            Update Season
-          </CButton>
+          <div className="d-flex justify-content-end mt-2">
+            <IconOnlyButton icon={cilSave} tone="primary" label="Update Season" type="submit" />
+          </div>
         </CForm>
       </CCardBody>
     </CCard>
-  );
-};
+  )
+}
 
-export default SeasonEdit;
+export default SeasonEdit

@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react'
+import { cilCart, cilCheck, cilCheckCircle, cilMagnifyingGlass, cilUserPlus } from '@coreui/icons'
 import {
   CCard,
   CCardHeader,
   CCardBody,
   CFormInput,
   CFormSelect,
-  CButton,
   CAlert,
   CRow,
   CCol,
@@ -13,44 +13,45 @@ import {
   CModalHeader,
   CModalBody,
   CModalFooter,
-} from "@coreui/react";
-import { useAuth } from "../../auth/AuthProvider";
+} from '@coreui/react'
+import { useAuth } from '../../auth/AuthProvider'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const CreateBooking = () => {
-  const auth = useAuth();
-  const API_BASE = auth.API_BASE;
-  const loggedUser = auth.user;
+  const auth = useAuth()
+  const API_BASE = auth.API_BASE
+  const loggedUser = auth.user
 
   // ---------------- STATE ----------------
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-  const [searchPhone, setSearchPhone] = useState("");
-  const [user, setUser] = useState(null);
-  const [userNotFound, setUserNotFound] = useState(false);
-  const [showUserModal, setShowUserModal] = useState(false);
+  const [searchPhone, setSearchPhone] = useState('')
+  const [user, setUser] = useState(null)
+  const [userNotFound, setUserNotFound] = useState(false)
+  const [showUserModal, setShowUserModal] = useState(false)
 
-  const [properties, setProperties] = useState([]);
-  const [roomTypes, setRoomTypes] = useState([]);
+  const [properties, setProperties] = useState([])
+  const [roomTypes, setRoomTypes] = useState([])
 
-  const [availabilityOptions, setAvailabilityOptions] = useState([]);
-  const [selectedOption, setSelectedOption] = useState(null);
+  const [availabilityOptions, setAvailabilityOptions] = useState([])
+  const [selectedOption, setSelectedOption] = useState(null)
 
   const [booking, setBooking] = useState({
-    property_id: "",
-    room_type_id: "",
-    start_date: "",
-    end_date: "",
+    property_id: '',
+    room_type_id: '',
+    start_date: '',
+    end_date: '',
     rooms: 1,
     guests: 1,
-  });
+  })
 
   const [newUser, setNewUser] = useState({
-    full_name: "",
-    email: "",
-    phone: "",
-  });
-  const today = new Date().toISOString().split("T")[0];
+    full_name: '',
+    email: '',
+    phone: '',
+  })
+  const today = new Date().toISOString().split('T')[0]
 
   // ---------------- LOAD PROPERTIES (ROLE BASED) ----------------
   useEffect(() => {
@@ -59,108 +60,102 @@ const CreateBooking = () => {
     })
       .then((r) => r.json())
       .then((d) => {
-        const all = d.data || d;
+        const all = d.data || d
 
-        if (
-          loggedUser?.role === "super_admin" ||
-          loggedUser?.Role?.role_name === "super_admin"
-        ) {
-          setProperties(all);
+        if (loggedUser?.role === 'super_admin' || loggedUser?.Role?.role_name === 'super_admin') {
+          setProperties(all)
         } else {
-          const filtered = all.filter(
-            (p) => p.property_id === loggedUser.property_id
-          );
-          setProperties(filtered);
+          const filtered = all.filter((p) => p.property_id === loggedUser.property_id)
+          setProperties(filtered)
           if (filtered.length === 1) {
             setBooking((b) => ({
               ...b,
               property_id: filtered[0].property_id,
-            }));
+            }))
           }
         }
-      });
-  }, []);
+      })
+  }, [])
 
   // ---------------- SEARCH USER ----------------
   const searchUser = async () => {
-    setError("");
-    setUser(null);
-    setUserNotFound(false);
-    setAvailabilityOptions([]);
-    setSelectedOption(null);
+    setError('')
+    setUser(null)
+    setUserNotFound(false)
+    setAvailabilityOptions([])
+    setSelectedOption(null)
 
     if (!searchPhone) {
-      setError("Enter mobile number");
-      return;
+      setError('Enter mobile number')
+      return
     }
 
-    const res = await fetch(
-      `${API_BASE}/users/search?q=${searchPhone}`,
-      { headers: auth.getAuthHeader() }
-    );
+    const res = await fetch(`${API_BASE}/users/search?q=${searchPhone}`, {
+      headers: auth.getAuthHeader(),
+    })
 
-    const data = await res.json();
+    const data = await res.json()
 
     if (data?.data?.length) {
-      setUser(data.data[0]);
+      setUser(data.data[0])
     } else {
-      setUserNotFound(true);
-      setNewUser({ phone: searchPhone, full_name: "", email: "" });
+      setUserNotFound(true)
+      setNewUser({ phone: searchPhone, full_name: '', email: '' })
     }
-  };
+  }
 
   // ---------------- CREATE USER ----------------
   const createUser = async () => {
-    setError("");
+    setError('')
 
-    const password = `${newUser.full_name.split(" ")[0]}@1234`;
+    const password = `${newUser.full_name.split(' ')[0]}@1234`
 
     const res = await fetch(`${API_BASE}/users`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         ...auth.getAuthHeader(),
       },
       body: JSON.stringify({ ...newUser, password }),
-    });
+    })
 
-    const data = await res.json();
+    const data = await res.json()
 
     if (!res.ok) {
-      setError(data.message || "Failed to create user");
-      return;
+      setError(data.message || 'Failed to create user')
+      return
     }
 
-    setUser(data.data);
-    setShowUserModal(false);
-    setUserNotFound(false);
-    setSuccess("User created successfully");
-  };
+    setUser(data.data)
+    setShowUserModal(false)
+    setUserNotFound(false)
+    setSuccess('User created successfully')
+  }
 
   // ---------------- LOAD ROOM TYPES ----------------
   useEffect(() => {
-    if (!booking.property_id) return;
+    if (!booking.property_id) return
 
     fetch(`${API_BASE}/room-types?property_id=${booking.property_id}`, {
       headers: auth.getAuthHeader(),
     })
       .then((r) => r.json())
-      .then((d) => setRoomTypes(d.data || d));
-  }, [booking.property_id]);
+      .then((d) => setRoomTypes(d.data || d))
+  }, [booking.property_id])
 
   // ---------------- CHECK AVAILABILITY (GET API) ----------------
   const checkAvailability = async () => {
-    setError("");
-    setAvailabilityOptions([]);
-    setSelectedOption(null);
+    setError('')
+    setAvailabilityOptions([])
+    setSelectedOption(null)
 
-    const { property_id, start_date, end_date, guests, rooms } = booking;
-    const numGuests = Number(guests);
-    const numRooms = Number(rooms);
+    const { property_id, start_date, end_date, guests, rooms } = booking
+    const numGuests = Number(guests)
+    const numRooms = Number(rooms)
 
     if (!property_id || !start_date || !end_date || !numGuests || !numRooms) {
-      setError("Fill all booking details");
-      return;
+      setError('Fill all booking details')
+      return
     }
 
     const query = new URLSearchParams({
@@ -171,32 +166,32 @@ const CreateBooking = () => {
       num_rooms: String(numRooms),
       guests: String(numGuests),
       rooms: String(numRooms),
-    }).toString();
+    }).toString()
 
     const res = await fetch(`${API_BASE}/availability?${query}`, {
       headers: auth.getAuthHeader(),
-    });
+    })
 
-    const data = await res.json();
+    const data = await res.json()
 
     if (!res.ok || !data.success || !data.options?.length) {
-      setError("No rooms available");
-      return;
+      setError('No rooms available')
+      return
     }
 
-    setAvailabilityOptions(data.options);
-  };
+    setAvailabilityOptions(data.options)
+  }
 
   // ---------------- CREATE BOOKING ----------------
   const createBooking = async () => {
-    setError("");
+    setError('')
 
     if (!selectedOption) {
-      setError("Please select an availability option");
-      return;
+      setError('Please select an availability option')
+      return
     }
 
-    const pricing = selectedOption?.pricing || {};
+    const pricing = selectedOption?.pricing || {}
     const payload = {
       user_id: Number(user.user_id),
       property_id: Number(booking.property_id),
@@ -222,33 +217,34 @@ const CreateBooking = () => {
           subtotal: Number(item.subtotal),
         })),
       },
-    };
+    }
 
     const res = await fetch(`http://127.0.0.1:4000/api/bookings`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         ...auth.getAuthHeader(),
       },
       body: JSON.stringify(payload),
-    });
-    const data = await res.json();
+    })
+    const data = await res.json()
 
     if (!res.ok || !data?.success) {
-      setError(data?.message || "Booking failed");
-      return;
+      setError(data?.message || 'Booking failed')
+      return
     }
 
-    const baseUrl = window.location.href.split("#")[0];
-    window.location.replace(`${baseUrl}#/bookings`);
-  };
+    const baseUrl = window.location.href.split('#')[0]
+    window.location.replace(`${baseUrl}#/bookings`)
+  }
 
   // ---------------- UI ----------------
   return (
     <CCard>
-      <CCardHeader><h4>Create Booking</h4></CCardHeader>
+      <CCardHeader>
+        <h4>Create Booking</h4>
+      </CCardHeader>
       <CCardBody>
-
         {error && <CAlert color="danger">{error}</CAlert>}
         {success && <CAlert color="success">{success}</CAlert>}
 
@@ -264,7 +260,13 @@ const CreateBooking = () => {
             />
           </CCol>
           <CCol md={2} className="d-flex align-items-end">
-            <CButton onClick={searchUser} disabled={!!user}>Search</CButton>
+            <IconOnlyButton
+              icon={cilMagnifyingGlass}
+              tone="info"
+              label="Search User"
+              onClick={searchUser}
+              disabled={!!user}
+            />
           </CCol>
         </CRow>
 
@@ -277,9 +279,14 @@ const CreateBooking = () => {
         {userNotFound && (
           <CAlert color="warning">
             User not found.
-            <CButton size="sm" className="ms-3" onClick={() => setShowUserModal(true)}>
-              Create User
-            </CButton>
+            <IconOnlyButton
+              icon={cilUserPlus}
+              size="sm"
+              className="ms-3"
+              tone="primary"
+              label="Create User"
+              onClick={() => setShowUserModal(true)}
+            />
           </CAlert>
         )}
 
@@ -293,13 +300,11 @@ const CreateBooking = () => {
                 <CFormSelect
                   label="Property"
                   value={booking.property_id}
-                  disabled={loggedUser?.Role?.role_name === "admin"}
-                  onChange={(e) =>
-                    setBooking({ ...booking, property_id: e.target.value })
-                  }
+                  disabled={loggedUser?.Role?.role_name === 'admin'}
+                  onChange={(e) => setBooking({ ...booking, property_id: e.target.value })}
                 >
                   <option value="">Select</option>
-                  {properties.map(p => (
+                  {properties.map((p) => (
                     <option key={p.property_id} value={p.property_id}>
                       {p.property_name}
                     </option>
@@ -311,12 +316,10 @@ const CreateBooking = () => {
                 <CFormSelect
                   label="Room Type"
                   value={booking.room_type_id}
-                  onChange={(e) =>
-                    setBooking({ ...booking, room_type_id: e.target.value })
-                  }
+                  onChange={(e) => setBooking({ ...booking, room_type_id: e.target.value })}
                 >
                   <option value="">Select</option>
-                  {roomTypes.map(r => (
+                  {roomTypes.map((r) => (
                     <option key={r.room_type_id} value={r.room_type_id}>
                       {r.room_type_name}
                     </option>
@@ -327,134 +330,154 @@ const CreateBooking = () => {
 
             <CRow className="mb-3">
               <CCol md={3}>
-                <CFormInput type="date" label="Check-in"
+                <CFormInput
+                  type="date"
+                  lang="en-GB"
+                  label="Check-in"
                   min={today}
                   value={booking.start_date}
-                  onChange={e => setBooking({ ...booking, start_date: e.target.value })}
+                  onChange={(e) => setBooking({ ...booking, start_date: e.target.value })}
                 />
               </CCol>
 
               <CCol md={3}>
-                <CFormInput type="date" label="Check-out"
+                <CFormInput
+                  type="date"
+                  lang="en-GB"
+                  label="Check-out"
                   min={booking.start_date || today}
                   value={booking.end_date}
-                  onChange={e => setBooking({ ...booking, end_date: e.target.value })}
+                  onChange={(e) => setBooking({ ...booking, end_date: e.target.value })}
                 />
               </CCol>
 
               <CCol md={3}>
-                <CFormInput type="number" label="Rooms"
+                <CFormInput
+                  type="number"
+                  label="Rooms"
                   value={booking.rooms}
-                  onChange={e => setBooking({ ...booking, rooms: e.target.value })}
+                  onChange={(e) => setBooking({ ...booking, rooms: e.target.value })}
                 />
               </CCol>
 
               <CCol md={3}>
-                <CFormInput type="number" label="Guests"
+                <CFormInput
+                  type="number"
+                  label="Guests"
                   value={booking.guests}
-                  onChange={e => setBooking({ ...booking, guests: e.target.value })}
+                  onChange={(e) => setBooking({ ...booking, guests: e.target.value })}
                 />
               </CCol>
             </CRow>
 
-            <CButton color="warning" onClick={checkAvailability}>
-              Check Availability
-            </CButton>
+            <IconOnlyButton
+              icon={cilCheckCircle}
+              tone="warning"
+              label="Check Availability"
+              onClick={checkAvailability}
+            />
 
             {/* AVAILABILITY OPTIONS */}
             {/* AVAILABILITY OPTIONS WITH PRICE */}
-{availabilityOptions.length > 0 && (
-  <>
-    <h6 className="mt-4">Available Options</h6>
+            {availabilityOptions.length > 0 && (
+              <>
+                <h6 className="mt-4">Available Options</h6>
 
-    {availabilityOptions.map((opt, idx) => (
-      <CAlert
-        key={idx}
-        color={selectedOption === opt ? "success" : "secondary"}
-        className="mb-3"
-      >
-        {/* BASIC INFO */}
-        <div className="mb-2">
-          <strong>Fit Type:</strong> {opt.fit_type.toUpperCase()} <br />
-          <strong>Total Rooms:</strong> {opt.room_count} <br />
-          <strong>Total Guests:</strong> {opt.total_occupancy}
-        </div>
+                {availabilityOptions.map((opt, idx) => (
+                  <CAlert
+                    key={idx}
+                    color={selectedOption === opt ? 'success' : 'secondary'}
+                    className="mb-3"
+                  >
+                    {/* BASIC INFO */}
+                    <div className="mb-2">
+                      <strong>Fit Type:</strong> {opt.fit_type.toUpperCase()} <br />
+                      <strong>Total Rooms:</strong> {opt.room_count} <br />
+                      <strong>Total Guests:</strong> {opt.total_occupancy}
+                    </div>
 
-        {/* PRICE BREAKUP TABLE */}
-        {opt.pricing && (
-          <div className="border rounded p-2 mb-2 bg-light">
-            <strong>Price Breakdown</strong>
+                    {/* PRICE BREAKUP TABLE */}
+                    {opt.pricing && (
+                      <div className="border rounded p-2 mb-2 bg-light">
+                        <strong>Price Breakdown</strong>
 
-            {opt.pricing.breakup.map((b, i) => (
-              <div key={i} className="mt-2">
-                <div><strong>{b.room_type_name}</strong></div>
-                <div>
-                  Qty: {b.qty} × Nights: {b.nights}
-                </div>
-                <div>
-                  Price / Night: ₹{b.price_per_night}
-                </div>
-                <div>
-                  Subtotal: <strong>₹{b.subtotal}</strong>
-                </div>
-              </div>
-            ))}
+                        {opt.pricing.breakup.map((b, i) => (
+                          <div key={i} className="mt-2">
+                            <div>
+                              <strong>{b.room_type_name}</strong>
+                            </div>
+                            <div>
+                              Qty: {b.qty} × Nights: {b.nights}
+                            </div>
+                            <div>Price / Night: ₹{b.price_per_night}</div>
+                            <div>
+                              Subtotal: <strong>₹{b.subtotal}</strong>
+                            </div>
+                          </div>
+                        ))}
 
-            <hr />
-            <div className="d-flex justify-content-between">
-              <span>Base Price</span>
-              <span>₹{opt.pricing.base_price}</span>
-            </div>
-            <div className="d-flex justify-content-between">
-              <span>Total Tax</span>
-              <span>₹{opt.pricing.tax_amount}</span>
-            </div>
-            {Array.isArray(opt.pricing.taxes) && opt.pricing.taxes.length > 0 && (
-              <div className="mt-2">
-                {opt.pricing.taxes.map((tax, taxIdx) => (
-                  <div key={taxIdx} className="d-flex justify-content-between">
-                    <span>{tax.tax_name} ({tax.percentage}%)</span>
-                    <span>₹{tax.amount}</span>
-                  </div>
+                        <hr />
+                        <div className="d-flex justify-content-between">
+                          <span>Base Price</span>
+                          <span>₹{opt.pricing.base_price}</span>
+                        </div>
+                        <div className="d-flex justify-content-between">
+                          <span>Total Tax</span>
+                          <span>₹{opt.pricing.tax_amount}</span>
+                        </div>
+                        {Array.isArray(opt.pricing.taxes) && opt.pricing.taxes.length > 0 && (
+                          <div className="mt-2">
+                            {opt.pricing.taxes.map((tax, taxIdx) => (
+                              <div key={taxIdx} className="d-flex justify-content-between">
+                                <span>
+                                  {tax.tax_name} ({tax.percentage}%)
+                                </span>
+                                <span>₹{tax.amount}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <hr />
+                        <div className="d-flex justify-content-between">
+                          <strong>Total Price</strong>
+                          <strong>
+                            ₹{opt.pricing.total_price} {opt.pricing.currency}
+                          </strong>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SELECT BUTTON */}
+                    <div className="d-flex justify-content-end">
+                      <IconOnlyButton
+                        icon={cilCheck}
+                        size="sm"
+                        tone="primary"
+                        label="Select This Option"
+                        onClick={() => {
+                          setSelectedOption(opt)
+                          setBooking({
+                            ...booking,
+                            room_type_id: opt.pricing.breakup[0].room_type_id,
+                          })
+                        }}
+                      />
+                    </div>
+                  </CAlert>
                 ))}
-              </div>
+              </>
             )}
-            <hr />
-            <div className="d-flex justify-content-between">
-              <strong>Total Price</strong>
-              <strong>
-                ₹{opt.pricing.total_price} {opt.pricing.currency}
-              </strong>
-            </div>
-          </div>
-        )}
-
-        {/* SELECT BUTTON */}
-        <div className="d-flex justify-content-end">
-          <CButton
-            size="sm"
-            color="primary"
-            onClick={() => {
-              setSelectedOption(opt);
-              setBooking({
-                ...booking,
-                room_type_id: opt.pricing.breakup[0].room_type_id,
-              });
-            }}
-          >
-            Select This Option
-          </CButton>
-        </div>
-      </CAlert>
-    ))}
-  </>
-)}
-
 
             {selectedOption && (
-              <CButton className="mt-3" color="success" onClick={createBooking}>
-                Book Now
-              </CButton>
+              <div className="d-flex justify-content-end">
+                <IconOnlyButton
+                  icon={cilCart}
+                  className="mt-3"
+                  tone="success"
+                  label="Book Now"
+                  onClick={createBooking}
+                />
+              </div>
             )}
           </>
         )}
@@ -477,11 +500,16 @@ const CreateBooking = () => {
           />
         </CModalBody>
         <CModalFooter>
-          <CButton color="primary" onClick={createUser}>Create User</CButton>
+          <IconOnlyButton
+            icon={cilUserPlus}
+            tone="primary"
+            label="Create User"
+            onClick={createUser}
+          />
         </CModalFooter>
       </CModal>
     </CCard>
-  );
-};
+  )
+}
 
-export default CreateBooking;
+export default CreateBooking

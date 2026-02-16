@@ -1,17 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import {
-  CCard,
-  CCardHeader,
-  CCardBody,
-  CForm,
-  CFormInput,
-  CButton,
-  CAlert,
-  CRow,
-  CCol,
-} from '@coreui/react'
+import { cilSave } from '@coreui/icons'
+import { CCard, CCardHeader, CCardBody, CForm, CFormInput, CAlert, CRow, CCol } from '@coreui/react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const UserEdit = () => {
   const { id } = useParams()
@@ -121,9 +113,9 @@ const UserEdit = () => {
             </CCol>
           </CRow>
 
-          <CButton color="primary" type="submit">
-            Update User
-          </CButton>
+          <div className="d-flex justify-content-end mt-2">
+            <IconOnlyButton icon={cilSave} tone="primary" label="Update User" type="submit" />
+          </div>
         </CForm>
       </CCardBody>
     </CCard>

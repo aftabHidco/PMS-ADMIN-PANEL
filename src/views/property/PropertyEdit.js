@@ -1,75 +1,67 @@
 // src/views/properties/PropertyEdit.js
-import React, { useEffect, useState } from "react";
-import {
-  CCard,
-  CCardHeader,
-  CCardBody,
-  CForm,
-  CFormInput,
-  CButton,
-  CAlert,
-  CRow,
-  CCol,
-} from "@coreui/react";
-import { useAuth } from "../../auth/AuthProvider";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useState } from 'react'
+import { cilSave } from '@coreui/icons'
+import { CCard, CCardHeader, CCardBody, CForm, CFormInput, CAlert, CRow, CCol } from '@coreui/react'
+import { useAuth } from '../../auth/AuthProvider'
+import { useNavigate, useParams } from 'react-router-dom'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const PropertyEdit = () => {
-  const auth = useAuth();
-  const navigate = useNavigate();
-  const { id } = useParams();
-  const API_BASE = auth.API_BASE;
+  const auth = useAuth()
+  const navigate = useNavigate()
+  const { id } = useParams()
+  const API_BASE = auth.API_BASE
 
-  const [form, setForm] = useState(null);
-  const [error, setError] = useState("");
+  const [form, setForm] = useState(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     fetch(`${API_BASE}/properties/${id}`, {
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         ...auth.getAuthHeader(),
       },
     })
       .then((res) => res.json())
       .then((data) => {
-        const p = data?.data || data;
-        setForm(p);
+        const p = data?.data || data
+        setForm(p)
       })
-      .catch(() => setError("Failed to load property"));
-  }, []);
+      .catch(() => setError('Failed to load property'))
+  }, [])
 
   const handleChange = (key, value) => {
-    setForm({ ...form, [key]: value });
-  };
+    setForm({ ...form, [key]: value })
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
+    e.preventDefault()
+    setError('')
 
     try {
       const res = await fetch(`${API_BASE}/properties/${id}`, {
-        method: "PUT",
+        method: 'PUT',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           ...auth.getAuthHeader(),
         },
         body: JSON.stringify(form),
-      });
+      })
 
-      const data = await res.json();
+      const data = await res.json()
 
       if (!res.ok) {
-        setError(data.message || "Failed to update property");
-        return;
+        setError(data.message || 'Failed to update property')
+        return
       }
 
-      navigate("/properties");
+      navigate('/properties')
     } catch (err) {
-      setError("Failed to update property");
+      setError('Failed to update property')
     }
-  };
+  }
 
-  if (!form) return <h4 className="p-3">Loading...</h4>;
+  if (!form) return <h4 className="p-3">Loading...</h4>
 
   return (
     <CCard>
@@ -86,7 +78,7 @@ const PropertyEdit = () => {
               <CFormInput
                 label="Property Name"
                 value={form.property_name}
-                onChange={(e) => handleChange("property_name", e.target.value)}
+                onChange={(e) => handleChange('property_name', e.target.value)}
                 required
               />
             </CCol>
@@ -95,7 +87,7 @@ const PropertyEdit = () => {
               <CFormInput
                 label="Property Code"
                 value={form.property_code}
-                onChange={(e) => handleChange("property_code", e.target.value)}
+                onChange={(e) => handleChange('property_code', e.target.value)}
               />
             </CCol>
           </CRow>
@@ -105,7 +97,7 @@ const PropertyEdit = () => {
               <CFormInput
                 label="Address"
                 value={form.address}
-                onChange={(e) => handleChange("address", e.target.value)}
+                onChange={(e) => handleChange('address', e.target.value)}
                 required
               />
             </CCol>
@@ -116,7 +108,7 @@ const PropertyEdit = () => {
               <CFormInput
                 label="City"
                 value={form.city}
-                onChange={(e) => handleChange("city", e.target.value)}
+                onChange={(e) => handleChange('city', e.target.value)}
                 required
               />
             </CCol>
@@ -124,7 +116,7 @@ const PropertyEdit = () => {
               <CFormInput
                 label="State"
                 value={form.state}
-                onChange={(e) => handleChange("state", e.target.value)}
+                onChange={(e) => handleChange('state', e.target.value)}
                 required
               />
             </CCol>
@@ -132,7 +124,7 @@ const PropertyEdit = () => {
               <CFormInput
                 label="Country"
                 value={form.country}
-                onChange={(e) => handleChange("country", e.target.value)}
+                onChange={(e) => handleChange('country', e.target.value)}
                 required
               />
             </CCol>
@@ -143,18 +135,18 @@ const PropertyEdit = () => {
               <CFormInput
                 label="Pincode"
                 value={form.pincode}
-                onChange={(e) => handleChange("pincode", e.target.value)}
+                onChange={(e) => handleChange('pincode', e.target.value)}
               />
             </CCol>
           </CRow>
 
-          <CButton color="primary" type="submit">
-            Update Property
-          </CButton>
+          <div className="d-flex justify-content-end mt-2">
+            <IconOnlyButton icon={cilSave} tone="primary" label="Update Property" type="submit" />
+          </div>
         </CForm>
       </CCardBody>
     </CCard>
-  );
-};
+  )
+}
 
-export default PropertyEdit;
+export default PropertyEdit

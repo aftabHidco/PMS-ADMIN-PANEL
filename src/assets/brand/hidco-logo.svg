@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="64" viewBox="0 0 260 64" role="img" aria-label="HIDCO logo">
+  <rect width="260" height="64" fill="transparent" />
+  <text x="6" y="46" font-family="Arial Black, Arial, sans-serif" font-size="44" fill="#0a8f57">HIDC</text>
+  <g transform="translate(192,8)">
+    <circle cx="20" cy="24" r="21" fill="none" stroke="#0072ce" stroke-width="6" />
+    <circle cx="20" cy="24" r="8" fill="#0a8f57" />
+  </g>
+</svg>

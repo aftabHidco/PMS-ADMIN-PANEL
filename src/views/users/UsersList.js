@@ -1,10 +1,10 @@
 // src/views/users/UsersList.js
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from 'react'
+import { cilChevronLeft, cilChevronRight, cilPencil, cilPlus } from '@coreui/icons'
 import {
   CCard,
   CCardHeader,
   CCardBody,
-  CButton,
   CTable,
   CTableHead,
   CTableRow,
@@ -14,101 +14,102 @@ import {
   CSpinner,
   CAlert,
   CFormInput,
-} from "@coreui/react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../auth/AuthProvider";
+} from '@coreui/react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../auth/AuthProvider'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const UsersList = () => {
-  const auth = useAuth();
-  const navigate = useNavigate();
+  const auth = useAuth()
+  const navigate = useNavigate()
 
-  const API_BASE = auth.API_BASE;
+  const API_BASE = auth.API_BASE
 
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   // Search, sorting, pagination
-  const [search, setSearch] = useState("");
-  const [sortField, setSortField] = useState("full_name");
-  const [sortDir, setSortDir] = useState("asc");
-  const [page, setPage] = useState(1);
-  const perPage = 10;
+  const [search, setSearch] = useState('')
+  const [sortField, setSortField] = useState('full_name')
+  const [sortDir, setSortDir] = useState('asc')
+  const [page, setPage] = useState(1)
+  const perPage = 10
 
   // ------------------------------------------------------------
   // Fetch Users
   // ------------------------------------------------------------
   const fetchUsers = async () => {
-    setLoading(true);
+    setLoading(true)
 
     try {
       const res = await fetch(`${API_BASE}/users?_page=1&_perPage=200`, {
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           ...auth.getAuthHeader(),
         },
-      });
+      })
 
-      const data = await res.json();
-      setUsers(data?.data || []);
+      const data = await res.json()
+      setUsers(data?.data || [])
     } catch (err) {
-      console.error("Error fetching users:", err);
-      setError("Failed to load users");
+      console.error('Error fetching users:', err)
+      setError('Failed to load users')
     }
 
-    setLoading(false);
-  };
+    setLoading(false)
+  }
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    fetchUsers()
+  }, [])
 
   // ------------------------------------------------------------
   // Search Filter Logic
   // ------------------------------------------------------------
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
-      const text = `${u.full_name} ${u.email} ${u.phone}`.toLowerCase();
-      return text.includes(search.toLowerCase());
-    });
-  }, [search, users]);
+      const text = `${u.full_name} ${u.email} ${u.phone}`.toLowerCase()
+      return text.includes(search.toLowerCase())
+    })
+  }, [search, users])
 
   // ------------------------------------------------------------
   // Sorting Logic
   // ------------------------------------------------------------
   const sortedUsers = useMemo(() => {
     return [...filteredUsers].sort((a, b) => {
-      let A = a[sortField] || "";
-      let B = b[sortField] || "";
+      let A = a[sortField] || ''
+      let B = b[sortField] || ''
 
-      if (typeof A === "string") A = A.toLowerCase();
-      if (typeof B === "string") B = B.toLowerCase();
+      if (typeof A === 'string') A = A.toLowerCase()
+      if (typeof B === 'string') B = B.toLowerCase()
 
-      if (sortDir === "asc") return A > B ? 1 : -1;
-      return A < B ? 1 : -1;
-    });
-  }, [filteredUsers, sortDir, sortField]);
+      if (sortDir === 'asc') return A > B ? 1 : -1
+      return A < B ? 1 : -1
+    })
+  }, [filteredUsers, sortDir, sortField])
 
   // ------------------------------------------------------------
   // Pagination Logic
   // ------------------------------------------------------------
-  const totalPages = Math.ceil(sortedUsers.length / perPage);
+  const totalPages = Math.ceil(sortedUsers.length / perPage)
 
   const paginatedUsers = useMemo(() => {
-    return sortedUsers.slice((page - 1) * perPage, page * perPage);
-  }, [sortedUsers, page]);
+    return sortedUsers.slice((page - 1) * perPage, page * perPage)
+  }, [sortedUsers, page])
 
   // ------------------------------------------------------------
   // Sorting Handler
   // ------------------------------------------------------------
   const handleSort = (field) => {
     if (sortField === field) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
     } else {
-      setSortField(field);
-      setSortDir("asc");
+      setSortField(field)
+      setSortDir('asc')
     }
-  };
+  }
 
   // ------------------------------------------------------------
   // UI Rendering
@@ -118,19 +119,19 @@ const UsersList = () => {
       <div className="text-center my-4">
         <CSpinner color="primary" />
       </div>
-    );
+    )
 
   return (
     <CCard>
       <CCardHeader>
         <h4 className="d-flex justify-content-between align-items-center">
           Users
-          <CButton
-            color="primary"
-            onClick={() => navigate("/users/create")}
-          >
-            + Create User
-          </CButton>
+          <IconOnlyButton
+            icon={cilPlus}
+            tone="primary"
+            label="Create User"
+            onClick={() => navigate('/users/create')}
+          />
         </h4>
       </CCardHeader>
 
@@ -143,8 +144,8 @@ const UsersList = () => {
           className="mb-3"
           value={search}
           onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
+            setSearch(e.target.value)
+            setPage(1)
           }}
         />
 
@@ -153,16 +154,16 @@ const UsersList = () => {
             <CTableRow>
               <CTableHeaderCell>#</CTableHeaderCell>
 
-              <CTableHeaderCell onClick={() => handleSort("full_name")}>
-                Name {sortField === "full_name" && (sortDir === "asc" ? "↑" : "↓")}
+              <CTableHeaderCell onClick={() => handleSort('full_name')}>
+                Name {sortField === 'full_name' && (sortDir === 'asc' ? '↑' : '↓')}
               </CTableHeaderCell>
 
-              <CTableHeaderCell onClick={() => handleSort("email")}>
-                Email {sortField === "email" && (sortDir === "asc" ? "↑" : "↓")}
+              <CTableHeaderCell onClick={() => handleSort('email')}>
+                Email {sortField === 'email' && (sortDir === 'asc' ? '↑' : '↓')}
               </CTableHeaderCell>
 
-              <CTableHeaderCell onClick={() => handleSort("phone")}>
-                Phone {sortField === "phone" && (sortDir === "asc" ? "↑" : "↓")}
+              <CTableHeaderCell onClick={() => handleSort('phone')}>
+                Phone {sortField === 'phone' && (sortDir === 'asc' ? '↑' : '↓')}
               </CTableHeaderCell>
 
               <CTableHeaderCell>Actions</CTableHeaderCell>
@@ -179,22 +180,20 @@ const UsersList = () => {
             ) : (
               paginatedUsers.map((u, index) => (
                 <CTableRow key={u.user_id}>
-                  <CTableDataCell>
-                    {(page - 1) * perPage + index + 1}
-                  </CTableDataCell>
+                  <CTableDataCell>{(page - 1) * perPage + index + 1}</CTableDataCell>
 
                   <CTableDataCell>{u.full_name}</CTableDataCell>
                   <CTableDataCell>{u.email}</CTableDataCell>
-                  <CTableDataCell>{u.phone || "-"}</CTableDataCell>
+                  <CTableDataCell>{u.phone || '-'}</CTableDataCell>
 
                   <CTableDataCell>
-                    <CButton
-                      color="info"
+                    <IconOnlyButton
+                      icon={cilPencil}
+                      tone="info"
                       size="sm"
+                      label="Edit User"
                       onClick={() => navigate(`/users/${u.user_id}`)}
-                    >
-                      Edit
-                    </CButton>
+                    />
                   </CTableDataCell>
                 </CTableRow>
               ))
@@ -204,24 +203,27 @@ const UsersList = () => {
 
         {/* Pagination */}
         <div className="d-flex justify-content-between mt-3">
-          <CButton disabled={page === 1} onClick={() => setPage(page - 1)}>
-            Previous
-          </CButton>
+          <IconOnlyButton
+            icon={cilChevronLeft}
+            label="Previous Page"
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}
+          />
 
           <span>
             Page {page} of {totalPages}
           </span>
 
-          <CButton
+          <IconOnlyButton
+            icon={cilChevronRight}
+            label="Next Page"
             disabled={page === totalPages}
             onClick={() => setPage(page + 1)}
-          >
-            Next
-          </CButton>
+          />
         </div>
       </CCardBody>
     </CCard>
-  );
-};
+  )
+}
 
-export default UsersList;
+export default UsersList

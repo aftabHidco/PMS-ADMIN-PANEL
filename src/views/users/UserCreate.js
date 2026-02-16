@@ -1,18 +1,10 @@
 // src/views/users/UserCreate.js
 import React, { useState } from 'react'
-import {
-  CCard,
-  CCardHeader,
-  CCardBody,
-  CForm,
-  CFormInput,
-  CButton,
-  CAlert,
-  CRow,
-  CCol
-} from '@coreui/react'
+import { cilSave } from '@coreui/icons'
+import { CCard, CCardHeader, CCardBody, CForm, CFormInput, CAlert, CRow, CCol } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const UserCreate = () => {
   const auth = useAuth()
@@ -71,7 +63,6 @@ const UserCreate = () => {
         {error && <CAlert color="danger">{error}</CAlert>}
 
         <CForm onSubmit={handleSubmit}>
-          
           {/* Row 1 */}
           <CRow className="mb-3">
             <CCol md={6}>
@@ -97,11 +88,7 @@ const UserCreate = () => {
           {/* Row 2 */}
           <CRow className="mb-3">
             <CCol md={6}>
-              <CFormInput
-                label="Phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
+              <CFormInput label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </CCol>
 
             <CCol md={6}>
@@ -115,9 +102,9 @@ const UserCreate = () => {
             </CCol>
           </CRow>
 
-          <CButton color="primary" type="submit">
-            Save User
-          </CButton>
+          <div className="d-flex justify-content-end mt-2">
+            <IconOnlyButton icon={cilSave} tone="primary" label="Save User" type="submit" />
+          </div>
         </CForm>
       </CCardBody>
     </CCard>

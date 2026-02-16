@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import {
-  CCard, CCardHeader, CCardBody,
-  CForm, CFormInput, CButton, CAlert, CRow, CCol
-} from '@coreui/react'
+import { cilSave } from '@coreui/icons'
+import { CCard, CCardHeader, CCardBody, CForm, CFormInput, CAlert, CRow, CCol } from '@coreui/react'
 import { useAuth } from '../../auth/AuthProvider'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const RoleCreate = () => {
   const auth = useAuth()
@@ -101,9 +100,9 @@ const RoleCreate = () => {
             </CCol>
           </CRow>
 
-          <CButton color="primary" type="submit">
-            Save Role
-          </CButton>
+          <div className="d-flex justify-content-end mt-2">
+            <IconOnlyButton icon={cilSave} tone="primary" label="Save Role" type="submit" />
+          </div>
         </CForm>
       </CCardBody>
     </CCard>

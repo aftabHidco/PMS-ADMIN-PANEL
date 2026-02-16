@@ -1,6 +1,6 @@
 import React from 'react'
+import { cilUserPlus } from '@coreui/icons'
 import {
-  CButton,
   CCard,
   CCardBody,
   CCol,
@@ -13,6 +13,7 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilLockLocked, cilUser } from '@coreui/icons'
+import IconOnlyButton from '../../../components/IconOnlyButton'
 
 const Register = () => {
   return (
@@ -56,7 +57,12 @@ const Register = () => {
                     />
                   </CInputGroup>
                   <div className="d-grid">
-                    <CButton color="success">Create Account</CButton>
+                    <IconOnlyButton
+                      icon={cilUserPlus}
+                      tone="success"
+                      label="Create Account"
+                      type="submit"
+                    />
                   </div>
                 </CForm>
               </CCardBody>

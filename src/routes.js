@@ -1,6 +1,5 @@
 import React from 'react'
 
-
 const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
 const Colors = React.lazy(() => import('./views/theme/colors/Colors'))
 const Typography = React.lazy(() => import('./views/theme/typography/Typography'))
@@ -88,10 +87,17 @@ const SeasonEdit = React.lazy(() => import('./views/seasons/SeasonEdit'))
 
 //CANCELLATION POLICY
 
-const CancellationPolicyList = React.lazy(() => import('./views/cancellation/CancellationPolicyList'));
-const CancellationPolicyCreate = React.lazy(() => import('./views/cancellation/CancellationPolicyCreate'));
-const CancellationPolicyEdit = React.lazy(() => import('./views/cancellation/CancellationPolicyEdit'));
+const CancellationPolicyList = React.lazy(
+  () => import('./views/cancellation/CancellationPolicyList'),
+)
+const CancellationPolicyCreate = React.lazy(
+  () => import('./views/cancellation/CancellationPolicyCreate'),
+)
+const CancellationPolicyEdit = React.lazy(
+  () => import('./views/cancellation/CancellationPolicyEdit'),
+)
 //BOOKING
+const BookingList = React.lazy(() => import('./views/bookings/BookingList'))
 const CreateBooking = React.lazy(() => import('./views/bookings/CreateBooking'))
 
 const routes = [
@@ -150,30 +156,38 @@ const routes = [
   { path: '/roles/create', name: 'Create Role', element: RoleCreate },
   { path: '/roles/:id/edit', name: 'Edit Role', element: RoleEdit },
   //ADMIN
-  { path: '/admins',name: 'Admin',element: AdminList,},
-  { path: '/admins/create',name: 'Create Admin',element: AdminCreate,},
-  { path: '/admins/:id/edit', name: 'Edit Admin', element: AdminEdit,},
+  { path: '/admins', name: 'Admin', element: AdminList },
+  { path: '/admins/create', name: 'Create Admin', element: AdminCreate },
+  { path: '/admins/:id/edit', name: 'Edit Admin', element: AdminEdit },
   //PROPERTY
-  { path: '/properties',name: 'properties',element: PropertyList,},
-  { path: '/properties/create',name: 'Create properties',element: PropertyCreate,},
-  { path: '/properties/:id/edit', name: 'Edit properties', element: PropertyEdit,},
+  { path: '/properties', name: 'properties', element: PropertyList },
+  { path: '/properties/create', name: 'Create properties', element: PropertyCreate },
+  { path: '/properties/:id/edit', name: 'Edit properties', element: PropertyEdit },
   //ROOM TYPE
-  { path: '/room-types',name: 'Room Types',element: RoomTypeList,},
-  { path: '/room-types/create',name: 'Create Room Types',element: RoomTypeCreate,},
-  { path: '/room-types/:id/edit', name: 'Edit Room Types', element: RoomTypeEdit,},
+  { path: '/room-types', name: 'Room Types', element: RoomTypeList },
+  { path: '/room-types/create', name: 'Create Room Types', element: RoomTypeCreate },
+  { path: '/room-types/:id/edit', name: 'Edit Room Types', element: RoomTypeEdit },
   //SEASON
-   { path: '/seasons',name: 'season',element: SeasonList,},
-  { path: '/seasons/create',name: 'Create season',element: SeasonCreate,},
-  { path: '/seasons/:id/edit', name: 'Edit season', element: SeasonEdit,},
+  { path: '/seasons', name: 'season', element: SeasonList },
+  { path: '/seasons/create', name: 'Create season', element: SeasonCreate },
+  { path: '/seasons/:id/edit', name: 'Edit season', element: SeasonEdit },
   //CANCELLATION
-  {path: "/cancellation", name: "Cancellation Policies",element: CancellationPolicyList,},
+  { path: '/cancellation', name: 'Cancellation Policies', element: CancellationPolicyList },
 
-  {path: "/cancellation/create", name: "Create Cancellation Policy", element: CancellationPolicyCreate,},
+  {
+    path: '/cancellation/create',
+    name: 'Create Cancellation Policy',
+    element: CancellationPolicyCreate,
+  },
 
-  {path: "/cancellation/:id/edit",name: "Edit Cancellation Policy",element: CancellationPolicyEdit,},
+  {
+    path: '/cancellation/:id/edit',
+    name: 'Edit Cancellation Policy',
+    element: CancellationPolicyEdit,
+  },
 
-  {path: "/bookings/create",name: "Create Booking",element: CreateBooking,},
-
+  { path: '/bookings', name: 'Bookings', element: BookingList },
+  { path: '/bookings/create', name: 'Create Booking', element: CreateBooking },
 ]
 
 export default routes

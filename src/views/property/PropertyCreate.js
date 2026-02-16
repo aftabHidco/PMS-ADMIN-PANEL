@@ -1,66 +1,58 @@
 // src/views/properties/PropertyCreate.js
-import React, { useState } from "react";
-import {
-  CCard,
-  CCardHeader,
-  CCardBody,
-  CForm,
-  CFormInput,
-  CButton,
-  CAlert,
-  CRow,
-  CCol,
-} from "@coreui/react";
-import { useAuth } from "../../auth/AuthProvider";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from 'react'
+import { cilSave } from '@coreui/icons'
+import { CCard, CCardHeader, CCardBody, CForm, CFormInput, CAlert, CRow, CCol } from '@coreui/react'
+import { useAuth } from '../../auth/AuthProvider'
+import { useNavigate } from 'react-router-dom'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const PropertyCreate = () => {
-  const auth = useAuth();
-  const navigate = useNavigate();
-  const API_BASE = auth.API_BASE;
+  const auth = useAuth()
+  const navigate = useNavigate()
+  const API_BASE = auth.API_BASE
 
   const [form, setForm] = useState({
-    property_name: "",
-    property_code: "",
-    address: "",
-    city: "",
-    state: "",
-    country: "",
-    pincode: "",
-  });
+    property_name: '',
+    property_code: '',
+    address: '',
+    city: '',
+    state: '',
+    country: '',
+    pincode: '',
+  })
 
-  const [error, setError] = useState("");
+  const [error, setError] = useState('')
 
   const handleChange = (key, value) => {
-    setForm({ ...form, [key]: value });
-  };
+    setForm({ ...form, [key]: value })
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
+    e.preventDefault()
+    setError('')
 
     try {
       const res = await fetch(`${API_BASE}/properties`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           ...auth.getAuthHeader(),
         },
         body: JSON.stringify(form),
-      });
+      })
 
-      const data = await res.json();
+      const data = await res.json()
 
       if (!res.ok) {
-        setError(data.message || "Failed to create property");
-        return;
+        setError(data.message || 'Failed to create property')
+        return
       }
 
-      navigate("/properties");
+      navigate('/properties')
     } catch (err) {
-      setError("Failed to create property");
+      setError('Failed to create property')
     }
-  };
+  }
 
   return (
     <CCard>
@@ -77,7 +69,7 @@ const PropertyCreate = () => {
               <CFormInput
                 label="Property Name"
                 value={form.property_name}
-                onChange={(e) => handleChange("property_name", e.target.value)}
+                onChange={(e) => handleChange('property_name', e.target.value)}
                 required
               />
             </CCol>
@@ -86,7 +78,7 @@ const PropertyCreate = () => {
               <CFormInput
                 label="Property Code"
                 value={form.property_code}
-                onChange={(e) => handleChange("property_code", e.target.value)}
+                onChange={(e) => handleChange('property_code', e.target.value)}
               />
             </CCol>
           </CRow>
@@ -96,7 +88,7 @@ const PropertyCreate = () => {
               <CFormInput
                 label="Address"
                 value={form.address}
-                onChange={(e) => handleChange("address", e.target.value)}
+                onChange={(e) => handleChange('address', e.target.value)}
                 required
               />
             </CCol>
@@ -107,7 +99,7 @@ const PropertyCreate = () => {
               <CFormInput
                 label="City"
                 value={form.city}
-                onChange={(e) => handleChange("city", e.target.value)}
+                onChange={(e) => handleChange('city', e.target.value)}
                 required
               />
             </CCol>
@@ -115,7 +107,7 @@ const PropertyCreate = () => {
               <CFormInput
                 label="State"
                 value={form.state}
-                onChange={(e) => handleChange("state", e.target.value)}
+                onChange={(e) => handleChange('state', e.target.value)}
                 required
               />
             </CCol>
@@ -123,7 +115,7 @@ const PropertyCreate = () => {
               <CFormInput
                 label="Country"
                 value={form.country}
-                onChange={(e) => handleChange("country", e.target.value)}
+                onChange={(e) => handleChange('country', e.target.value)}
                 required
               />
             </CCol>
@@ -134,18 +126,18 @@ const PropertyCreate = () => {
               <CFormInput
                 label="Pincode"
                 value={form.pincode}
-                onChange={(e) => handleChange("pincode", e.target.value)}
+                onChange={(e) => handleChange('pincode', e.target.value)}
               />
             </CCol>
           </CRow>
 
-          <CButton color="primary" type="submit">
-            Save Property
-          </CButton>
+          <div className="d-flex justify-content-end mt-2">
+            <IconOnlyButton icon={cilSave} tone="primary" label="Save Property" type="submit" />
+          </div>
         </CForm>
       </CCardBody>
     </CCard>
-  );
-};
+  )
+}
 
-export default PropertyCreate;
+export default PropertyCreate

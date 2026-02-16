@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import {
-  CCard, CCardHeader, CCardBody,
-  CForm, CFormInput, CButton, CAlert, CRow, CCol
-} from '@coreui/react'
+import { cilSave } from '@coreui/icons'
+import { CCard, CCardHeader, CCardBody, CForm, CFormInput, CAlert, CRow, CCol } from '@coreui/react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import axios from 'axios'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const RoleEdit = () => {
   const { id } = useParams()
@@ -112,9 +111,9 @@ const RoleEdit = () => {
             </CCol>
           </CRow>
 
-          <CButton color="primary" type="submit">
-            Update Role
-          </CButton>
+          <div className="d-flex justify-content-end mt-2">
+            <IconOnlyButton icon={cilSave} tone="primary" label="Update Role" type="submit" />
+          </div>
         </CForm>
       </CCardBody>
     </CCard>

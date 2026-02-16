@@ -1,12 +1,21 @@
 // src/views/admins/AdminCreate.js
 import React, { useState, useEffect } from 'react'
+import { cilSave } from '@coreui/icons'
 import {
-  CCard, CCardHeader, CCardBody, CForm,
-  CRow, CCol, CFormInput, CButton, CAlert, CFormSelect
+  CCard,
+  CCardHeader,
+  CCardBody,
+  CForm,
+  CRow,
+  CCol,
+  CFormInput,
+  CAlert,
+  CFormSelect,
 } from '@coreui/react'
 import axios from 'axios'
 import { useAuth } from '../../auth/AuthProvider'
 import { useNavigate } from 'react-router-dom'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const AdminCreate = () => {
   const auth = useAuth()
@@ -28,17 +37,17 @@ const AdminCreate = () => {
   useEffect(() => {
     fetch(`${API_BASE}/properties?_perPage=100`, {
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         ...auth.getAuthHeader(),
-      }
+      },
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         const list = Array.isArray(data.data) ? data.data : data
         setProperties(list)
       })
       .catch(() => {
-        setError("Failed to load properties")
+        setError('Failed to load properties')
       })
   }, [])
 
@@ -56,8 +65,8 @@ const AdminCreate = () => {
       email: form.email,
       phone: form.phone,
       password: form.password,
-      role: "admin",                // required by backend
-      property_id: form.property_id // required for admin users
+      role: 'admin', // required by backend
+      property_id: form.property_id, // required for admin users
     }
 
     try {
@@ -70,19 +79,21 @@ const AdminCreate = () => {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.message || "Failed to create admin user")
+        setError(data.message || 'Failed to create admin user')
         return
       }
 
       navigate('/admins')
     } catch (err) {
-      setError("Failed to create admin user")
+      setError('Failed to create admin user')
     }
   }
 
   return (
     <CCard>
-      <CCardHeader><h4>Create Admin User</h4></CCardHeader>
+      <CCardHeader>
+        <h4>Create Admin User</h4>
+      </CCardHeader>
 
       <CCardBody>
         {error && <CAlert color="danger">{error}</CAlert>}
@@ -94,7 +105,7 @@ const AdminCreate = () => {
                 label="Full Name"
                 className="mb-3"
                 value={form.full_name}
-                onChange={(e) => handleChange("full_name", e.target.value)}
+                onChange={(e) => handleChange('full_name', e.target.value)}
                 required
               />
             </CCol>
@@ -105,7 +116,7 @@ const AdminCreate = () => {
                 type="email"
                 className="mb-3"
                 value={form.email}
-                onChange={(e) => handleChange("email", e.target.value)}
+                onChange={(e) => handleChange('email', e.target.value)}
                 required
               />
             </CCol>
@@ -117,7 +128,7 @@ const AdminCreate = () => {
                 label="Phone"
                 className="mb-3"
                 value={form.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
+                onChange={(e) => handleChange('phone', e.target.value)}
               />
             </CCol>
 
@@ -127,7 +138,7 @@ const AdminCreate = () => {
                 type="password"
                 className="mb-3"
                 value={form.password}
-                onChange={(e) => handleChange("password", e.target.value)}
+                onChange={(e) => handleChange('password', e.target.value)}
                 required
               />
             </CCol>
@@ -140,21 +151,22 @@ const AdminCreate = () => {
                 label="Property"
                 className="mb-3"
                 value={form.property_id}
-                onChange={(e) => handleChange("property_id", e.target.value)}
+                onChange={(e) => handleChange('property_id', e.target.value)}
                 required
-                >
+              >
                 <option value="">Select Property</option>
                 {properties.map((p) => (
-                    <option key={p.property_id} value={p.property_id}>
+                  <option key={p.property_id} value={p.property_id}>
                     {p.property_name}
-                    </option>
+                  </option>
                 ))}
-                </CFormSelect>
-
+              </CFormSelect>
             </CCol>
           </CRow>
 
-          <CButton color="primary" type="submit">Save Admin</CButton>
+          <div className="d-flex justify-content-end mt-2">
+            <IconOnlyButton icon={cilSave} tone="primary" label="Save Admin" type="submit" />
+          </div>
         </CForm>
       </CCardBody>
     </CCard>

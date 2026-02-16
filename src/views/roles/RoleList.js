@@ -1,11 +1,19 @@
 import React, { useEffect, useState } from 'react'
+import { cilPencil, cilPlus, cilTrash } from '@coreui/icons'
 import {
-  CCard, CCardHeader, CCardBody,
-  CTable, CTableHead, CTableRow, CTableHeaderCell,
-  CTableBody, CTableDataCell, CButton
+  CCard,
+  CCardHeader,
+  CCardBody,
+  CTable,
+  CTableHead,
+  CTableRow,
+  CTableHeaderCell,
+  CTableBody,
+  CTableDataCell,
 } from '@coreui/react'
 import { useAuth } from '../../auth/AuthProvider'
 import { useNavigate } from 'react-router-dom'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const RoleList = () => {
   const auth = useAuth()
@@ -18,14 +26,14 @@ const RoleList = () => {
   const fetchRoles = async () => {
     const res = await fetch(`${API_BASE}/roles`, { headers: auth.getAuthHeader() })
     const data = await res.json()
-    
+
     // Correctly set the roles data from the API response
-    setRoles(data.data || [])  // Using 'data' field from API response
+    setRoles(data.data || []) // Using 'data' field from API response
   }
 
   // Delete a role
   const deleteRole = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this role?")) return
+    if (!window.confirm('Are you sure you want to delete this role?')) return
     await fetch(`${API_BASE}/roles/${id}`, {
       method: 'DELETE',
       headers: auth.getAuthHeader(),
@@ -42,9 +50,12 @@ const RoleList = () => {
     <CCard>
       <CCardHeader className="d-flex justify-content-between align-items-center">
         <h4>Roles</h4>
-        <CButton color="primary" onClick={() => navigate('/roles/create')}>
-          Create Role
-        </CButton>
+        <IconOnlyButton
+          icon={cilPlus}
+          tone="primary"
+          label="Create Role"
+          onClick={() => navigate('/roles/create')}
+        />
       </CCardHeader>
 
       <CCardBody>
@@ -62,19 +73,24 @@ const RoleList = () => {
               <CTableRow key={role.role_id}>
                 <CTableDataCell>{role.role_id}</CTableDataCell>
                 <CTableDataCell>{role.role_name}</CTableDataCell>
-                <CTableDataCell>{role.role_description}</CTableDataCell> {/* Displaying description */}
+                <CTableDataCell>{role.role_description}</CTableDataCell>{' '}
+                {/* Displaying description */}
                 <CTableDataCell>
-                  <CButton
-                    color="info"
+                  <IconOnlyButton
+                    icon={cilPencil}
+                    tone="info"
                     size="sm"
                     className="me-2"
+                    label="Edit Role"
                     onClick={() => navigate(`/roles/${role.role_id}/edit`)}
-                  >
-                    Edit
-                  </CButton>
-                  <CButton color="danger" size="sm" onClick={() => deleteRole(role.role_id)}>
-                    Delete
-                  </CButton>
+                  />
+                  <IconOnlyButton
+                    icon={cilTrash}
+                    tone="danger"
+                    size="sm"
+                    label="Delete Role"
+                    onClick={() => deleteRole(role.role_id)}
+                  />
                 </CTableDataCell>
               </CTableRow>
             ))}

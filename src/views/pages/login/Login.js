@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
-  CButton,
   CCard,
   CCardBody,
   CCardGroup,
@@ -16,8 +15,9 @@ import {
   CAlert,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilLockLocked, cilUser } from '@coreui/icons'
+import { cilArrowRight, cilLockLocked, cilUser } from '@coreui/icons'
 import { useAuth } from '../../../auth/AuthProvider'
+import IconOnlyButton from '../../../components/IconOnlyButton'
 
 const Login = () => {
   const auth = useAuth()
@@ -114,14 +114,20 @@ const Login = () => {
 
                     <CRow>
                       <CCol xs={6}>
-                        <CButton
-                          color="primary"
+                        <IconOnlyButton
+                          icon={cilArrowRight}
+                          tone="primary"
                           className="px-4"
                           type="submit"
                           disabled={loading}
+                          label={loading ? 'Signing In' : 'Login'}
                         >
-                          {loading ? 'Signing in...' : 'Login'}
-                        </CButton>
+                          {loading ? (
+                            <CIcon icon={cilLockLocked} />
+                          ) : (
+                            <CIcon icon={cilArrowRight} />
+                          )}
+                        </IconOnlyButton>
                       </CCol>
                     </CRow>
                   </CForm>

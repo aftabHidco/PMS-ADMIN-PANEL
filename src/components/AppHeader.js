@@ -1,36 +1,22 @@
 import React, { useEffect, useRef } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
-import {
-  CContainer,
-  CDropdown,
-  CDropdownItem,
-  CDropdownMenu,
-  CDropdownToggle,
-  CHeader,
-  CHeaderNav,
-  CHeaderToggler,
-  CNavLink,
-  CNavItem,
-  useColorModes,
-} from '@coreui/react'
+import { CContainer, CHeader, CHeaderToggler, useColorModes } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import {
-  cilBell,
-  cilContrast,
-  cilEnvelopeOpen,
-  cilList,
-  cilMenu,
-  cilMoon,
-  cilSun,
-} from '@coreui/icons'
+import { cilAccountLogout, cilMenu, cilMoon, cilSun } from '@coreui/icons'
 
-import { AppBreadcrumb } from './index'
-import { AppHeaderDropdown } from './header/index'
+import { useAuth } from '../auth/AuthProvider'
+import IconOnlyButton from './IconOnlyButton'
 
 const AppHeader = () => {
   const headerRef = useRef()
+  const navigate = useNavigate()
+  const auth = useAuth()
   const { colorMode, setColorMode } = useColorModes('coreui-free-react-admin-template-theme')
+  const userName =
+    auth?.user?.full_name || auth?.user?.name || auth?.user?.email || auth?.user?.role || 'User'
+  const userInitial = userName?.charAt(0)?.toUpperCase() || 'U'
+  const activeMode = colorMode === 'dark' ? 'dark' : 'light'
 
   const dispatch = useDispatch()
   const sidebarShow = useSelector((state) => state.sidebarShow)
@@ -45,97 +31,90 @@ const AppHeader = () => {
     return () => document.removeEventListener('scroll', handleScroll)
   }, [])
 
+  const handleLogout = () => {
+    localStorage.removeItem('app_token')
+    localStorage.removeItem('app_user')
+    auth.logout()
+    navigate('/login', { replace: true })
+  }
+
   return (
-    <CHeader position="sticky" className="mb-4 p-0" ref={headerRef}>
-      <CContainer className="border-bottom px-4" fluid>
+    <CHeader position="sticky" className="mb-2 p-0" ref={headerRef}>
+      <CContainer className="border-bottom px-3 py-2 d-flex align-items-center gap-2" fluid>
         <CHeaderToggler
+          className="border rounded-circle d-flex align-items-center justify-content-center"
           onClick={() => dispatch({ type: 'set', sidebarShow: !sidebarShow })}
-          style={{ marginInlineStart: '-14px' }}
+          style={{
+            width: '34px',
+            height: '34px',
+            backgroundColor: 'var(--cui-body-bg)',
+            marginInlineStart: 0,
+          }}
         >
-          <CIcon icon={cilMenu} size="lg" />
+          <CIcon icon={cilMenu} />
         </CHeaderToggler>
-        <CHeaderNav className="d-none d-md-flex">
-          <CNavItem>
-            <CNavLink to="/dashboard" as={NavLink}>
-              Dashboard
-            </CNavLink>
-          </CNavItem>
-          <CNavItem>
-            <CNavLink href="#">Users</CNavLink>
-          </CNavItem>
-          <CNavItem>
-            <CNavLink href="#">Settings</CNavLink>
-          </CNavItem>
-        </CHeaderNav>
-        <CHeaderNav className="ms-auto">
-          <CNavItem>
-            <CNavLink href="#">
-              <CIcon icon={cilBell} size="lg" />
-            </CNavLink>
-          </CNavItem>
-          <CNavItem>
-            <CNavLink href="#">
-              <CIcon icon={cilList} size="lg" />
-            </CNavLink>
-          </CNavItem>
-          <CNavItem>
-            <CNavLink href="#">
-              <CIcon icon={cilEnvelopeOpen} size="lg" />
-            </CNavLink>
-          </CNavItem>
-        </CHeaderNav>
-        <CHeaderNav>
-          <li className="nav-item py-1">
-            <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
-          </li>
-          <CDropdown variant="nav-item" placement="bottom-end">
-            <CDropdownToggle caret={false}>
-              {colorMode === 'dark' ? (
-                <CIcon icon={cilMoon} size="lg" />
-              ) : colorMode === 'auto' ? (
-                <CIcon icon={cilContrast} size="lg" />
-              ) : (
-                <CIcon icon={cilSun} size="lg" />
-              )}
-            </CDropdownToggle>
-            <CDropdownMenu>
-              <CDropdownItem
-                active={colorMode === 'light'}
-                className="d-flex align-items-center"
-                as="button"
-                type="button"
-                onClick={() => setColorMode('light')}
-              >
-                <CIcon className="me-2" icon={cilSun} size="lg" /> Light
-              </CDropdownItem>
-              <CDropdownItem
-                active={colorMode === 'dark'}
-                className="d-flex align-items-center"
-                as="button"
-                type="button"
-                onClick={() => setColorMode('dark')}
-              >
-                <CIcon className="me-2" icon={cilMoon} size="lg" /> Dark
-              </CDropdownItem>
-              <CDropdownItem
-                active={colorMode === 'auto'}
-                className="d-flex align-items-center"
-                as="button"
-                type="button"
-                onClick={() => setColorMode('auto')}
-              >
-                <CIcon className="me-2" icon={cilContrast} size="lg" /> Auto
-              </CDropdownItem>
-            </CDropdownMenu>
-          </CDropdown>
-          <li className="nav-item py-1">
-            <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
-          </li>
-          <AppHeaderDropdown />
-        </CHeaderNav>
-      </CContainer>
-      <CContainer className="px-4" fluid>
-        <AppBreadcrumb />
+        <div className="ms-auto d-flex align-items-center gap-2">
+          <div
+            className="d-flex align-items-center rounded-pill p-1 border shadow-sm"
+            style={{ backgroundColor: 'var(--cui-body-bg)' }}
+          >
+            <IconOnlyButton
+              icon={cilSun}
+              tone={activeMode === 'light' ? 'primary' : 'default'}
+              label="Light Mode"
+              size="sm"
+              className="rounded-circle p-1 d-flex align-items-center justify-content-center"
+              style={{ width: '30px', height: '30px', opacity: activeMode === 'light' ? 1 : 0.75 }}
+              onClick={() => setColorMode('light')}
+            />
+            <IconOnlyButton
+              icon={cilMoon}
+              tone={activeMode === 'dark' ? 'primary' : 'default'}
+              label="Dark Mode"
+              size="sm"
+              className="rounded-circle p-1 d-flex align-items-center justify-content-center"
+              style={{ width: '30px', height: '30px', opacity: activeMode === 'dark' ? 1 : 0.75 }}
+              onClick={() => setColorMode('dark')}
+            />
+          </div>
+
+          <div
+            className="d-flex align-items-center gap-2 px-2 py-1 rounded-3 border shadow-sm"
+            style={{
+              maxWidth: '250px',
+              background:
+                colorMode === 'dark'
+                  ? 'linear-gradient(90deg, rgba(27,32,36,0.95), rgba(43,50,57,0.95))'
+                  : 'linear-gradient(90deg, rgba(255,255,255,1), rgba(243,246,250,1))',
+            }}
+            title={userName}
+          >
+            <div
+              className="rounded-2 d-flex align-items-center justify-content-center fw-bold text-white"
+              style={{
+                width: '26px',
+                height: '26px',
+                backgroundColor: 'var(--cui-primary)',
+                fontSize: '12px',
+                flexShrink: 0,
+              }}
+            >
+              {userInitial}
+            </div>
+            <span className="fw-semibold text-truncate" style={{ fontSize: '0.88rem' }}>
+              {userName}
+            </span>
+          </div>
+          <IconOnlyButton
+            icon={cilAccountLogout}
+            tone="danger"
+            label="Logout"
+            size="sm"
+            className="rounded-3 d-flex align-items-center justify-content-center shadow-sm"
+            style={{ width: '34px', height: '34px' }}
+            onClick={handleLogout}
+          />
+        </div>
       </CContainer>
     </CHeader>
   )

@@ -9,12 +9,10 @@ import {
   CSidebarHeader,
   CSidebarToggler,
 } from '@coreui/react'
-import CIcon from '@coreui/icons-react'
 
 import { AppSidebarNav } from './AppSidebarNav'
 
-import { logo } from 'src/assets/brand/logo'
-import { sygnet } from 'src/assets/brand/sygnet'
+const HIDCO_LOGO_URL = 'https://www.wbhidcoltd.com/assets/frontend/img/logo.jpg'
 
 // sidebar nav config
 import navigation from '../_nav'
@@ -36,9 +34,19 @@ const AppSidebar = () => {
       }}
     >
       <CSidebarHeader className="border-bottom">
-        <CSidebarBrand to="/">
-          <CIcon customClassName="sidebar-brand-full" icon={logo} height={32} />
-          <CIcon customClassName="sidebar-brand-narrow" icon={sygnet} height={32} />
+        <CSidebarBrand to="/" className="d-flex justify-content-center align-items-center py-2">
+          <img
+            src={HIDCO_LOGO_URL}
+            alt="HIDCO"
+            className="sidebar-brand-full"
+            style={{ width: '170px', height: '48px', objectFit: 'contain' }}
+          />
+          <img
+            src={HIDCO_LOGO_URL}
+            alt="HIDCO"
+            className="sidebar-brand-narrow"
+            style={{ width: '36px', height: '36px', objectFit: 'contain', borderRadius: '4px' }}
+          />
         </CSidebarBrand>
         <CCloseButton
           className="d-lg-none"

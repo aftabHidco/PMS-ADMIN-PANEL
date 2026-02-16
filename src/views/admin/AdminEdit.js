@@ -1,12 +1,21 @@
 // src/views/admins/AdminEdit.js
 import React, { useEffect, useState } from 'react'
+import { cilSave } from '@coreui/icons'
 import {
-  CCard, CCardHeader, CCardBody, CForm,
-  CRow, CCol, CFormInput, CButton, CAlert, CFormSelect
+  CCard,
+  CCardHeader,
+  CCardBody,
+  CForm,
+  CRow,
+  CCol,
+  CFormInput,
+  CAlert,
+  CFormSelect,
 } from '@coreui/react'
 import axios from 'axios'
 import { useAuth } from '../../auth/AuthProvider'
 import { useNavigate, useParams } from 'react-router-dom'
+import IconOnlyButton from '../../components/IconOnlyButton'
 
 const AdminEdit = () => {
   const { id } = useParams()
@@ -15,47 +24,46 @@ const AdminEdit = () => {
   const API_BASE = auth.API_BASE
 
   const [form, setForm] = useState(null)
-  const [error, setError] = useState("")
+  const [error, setError] = useState('')
   const [properties, setProperties] = useState([])
-  const [ip, setIp] = useState("")
+  const [ip, setIp] = useState('')
 
   // ------------------------------
   // Load IP + Admin + Properties
   // ------------------------------
   useEffect(() => {
-    axios.get("https://api.ipify.org?format=json")
-      .then(res => setIp(res.data.ip))
+    axios.get('https://api.ipify.org?format=json').then((res) => setIp(res.data.ip))
 
     // Load admin user
     fetch(`${API_BASE}/admin-users/${id}`, { headers: auth.getAuthHeader() })
-      .then(res => res.json())
-      .then(data => {
-        console.log("ADMIN EDIT RAW RESPONSE =", data)
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('ADMIN EDIT RAW RESPONSE =', data)
 
         let user = data
 
-        if (data?.data) user = data.data   // API returns {data: {...}}
-        if (Array.isArray(data)) user = data[0]  // API returns [{...}]
+        if (data?.data) user = data.data // API returns {data: {...}}
+        if (Array.isArray(data)) user = data[0] // API returns [{...}]
 
         setForm(user)
       })
-      .catch(() => setError("Failed to load admin"))
+      .catch(() => setError('Failed to load admin'))
   }, [])
 
   // Load property list
   useEffect(() => {
     fetch(`${API_BASE}/properties?_perPage=200`, {
       headers: {
-        "Content-Type": "application/json",
-        ...auth.getAuthHeader()
-      }
+        'Content-Type': 'application/json',
+        ...auth.getAuthHeader(),
+      },
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         const list = Array.isArray(data.data) ? data.data : data
         setProperties(list)
       })
-      .catch(() => console.log("Failed to load properties"))
+      .catch(() => console.log('Failed to load properties'))
   }, [])
 
   // ------------------------------
@@ -75,32 +83,32 @@ const AdminEdit = () => {
       full_name: form.full_name,
       email: form.email,
       phone: form.phone,
-      role: "admin",
+      role: 'admin',
       property_id: form.property_id, // cannot change, but sent back
       updated_by: auth.user.user_id,
-      ip_address: ip
+      ip_address: ip,
     }
 
     try {
       const res = await fetch(`${API_BASE}/admin-users/${id}`, {
-        method: "PUT",
+        method: 'PUT',
         headers: {
-          "Content-Type": "application/json",
-          ...auth.getAuthHeader()
+          'Content-Type': 'application/json',
+          ...auth.getAuthHeader(),
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.message || "Failed to update admin")
+        setError(data.message || 'Failed to update admin')
         return
       }
 
-      navigate("/admins")
+      navigate('/admins')
     } catch (err) {
-      setError("Failed to update admin")
+      setError('Failed to update admin')
     }
   }
 
@@ -108,7 +116,9 @@ const AdminEdit = () => {
 
   return (
     <CCard>
-      <CCardHeader><h4>Edit Admin User</h4></CCardHeader>
+      <CCardHeader>
+        <h4>Edit Admin User</h4>
+      </CCardHeader>
 
       <CCardBody>
         {error && <CAlert color="danger">{error}</CAlert>}
@@ -119,8 +129,8 @@ const AdminEdit = () => {
               <CFormInput
                 label="Full Name"
                 className="mb-3"
-                value={form.full_name || ""}
-                onChange={(e) => handleChange("full_name", e.target.value)}
+                value={form.full_name || ''}
+                onChange={(e) => handleChange('full_name', e.target.value)}
                 required
               />
             </CCol>
@@ -130,8 +140,8 @@ const AdminEdit = () => {
                 label="Email"
                 type="email"
                 className="mb-3"
-                value={form.email || ""}
-                onChange={(e) => handleChange("email", e.target.value)}
+                value={form.email || ''}
+                onChange={(e) => handleChange('email', e.target.value)}
                 required
               />
             </CCol>
@@ -142,8 +152,8 @@ const AdminEdit = () => {
               <CFormInput
                 label="Phone"
                 className="mb-3"
-                value={form.phone || ""}
-                onChange={(e) => handleChange("phone", e.target.value)}
+                value={form.phone || ''}
+                onChange={(e) => handleChange('phone', e.target.value)}
               />
             </CCol>
 
@@ -152,11 +162,11 @@ const AdminEdit = () => {
               <CFormSelect
                 label="Assigned Property"
                 className="mb-3"
-                value={form.property_id || ""}
+                value={form.property_id || ''}
                 disabled
               >
                 <option value="">Select Property</option>
-                {properties.map(p => (
+                {properties.map((p) => (
                   <option key={p.property_id} value={p.property_id}>
                     {p.property_name}
                   </option>
@@ -165,9 +175,9 @@ const AdminEdit = () => {
             </CCol>
           </CRow>
 
-          <CButton color="primary" type="submit">
-            Update Admin
-          </CButton>
+          <div className="d-flex justify-content-end mt-2">
+            <IconOnlyButton icon={cilSave} tone="primary" label="Update Admin" type="submit" />
+          </div>
         </CForm>
       </CCardBody>
     </CCard>
