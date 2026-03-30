@@ -2,13 +2,14 @@
 import React, { useEffect, useState } from 'react'
 import { cilSave } from '@coreui/icons'
 import {
+  CAlert,
   CCard,
   CCardBody,
   CCardHeader,
   CForm,
   CFormInput,
   CFormTextarea,
-  CAlert,
+  CSpinner,
 } from '@coreui/react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
@@ -21,12 +22,21 @@ const CancellationPolicyEdit = () => {
   const API_BASE = auth.API_BASE
 
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   const [form, setForm] = useState({
     name: '',
     description: '',
-    rules: '',
+    deduction_percentage: '',
+    refund_window_days: '',
+    applies_on_booking_status: 'cancelled',
   })
+
+  const parseStatusList = (value) =>
+    String(value || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
 
   useEffect(() => {
     fetch(`${API_BASE}/cancellation-policies/${id}`, {
@@ -34,14 +44,20 @@ const CancellationPolicyEdit = () => {
     })
       .then((res) => res.json())
       .then((data) => {
+        const policy = data?.data || data || {}
         setForm({
-          name: data.name,
-          description: data.description,
-          rules: data.rules,
+          name: policy?.name || '',
+          description: policy?.description || '',
+          deduction_percentage: String(policy?.deduction_percentage ?? ''),
+          refund_window_days: String(policy?.rules?.refund_window_days ?? ''),
+          applies_on_booking_status: Array.isArray(policy?.rules?.applies_on_booking_status)
+            ? policy.rules.applies_on_booking_status.join(', ')
+            : 'cancelled',
         })
       })
       .catch(() => setError('Failed to load policy'))
-  }, [])
+      .finally(() => setLoading(false))
+  }, [API_BASE, auth, id])
 
   const handleChange = (key, value) => {
     setForm({ ...form, [key]: value })
@@ -51,9 +67,16 @@ const CancellationPolicyEdit = () => {
     e.preventDefault()
     setError('')
 
+    const actorId = auth.user?.user_id || auth.user?.id
     const payload = {
-      ...form,
-      updated_by: auth.user?.id,
+      name: form.name.trim(),
+      description: form.description.trim(),
+      deduction_percentage: Number(form.deduction_percentage || 0),
+      rules: {
+        refund_window_days: Number(form.refund_window_days || 0),
+        applies_on_booking_status: parseStatusList(form.applies_on_booking_status),
+      },
+      ...(actorId ? { updated_by: actorId } : {}),
       ip_address: 'auto',
     }
 
@@ -67,14 +90,14 @@ const CancellationPolicyEdit = () => {
         body: JSON.stringify(payload),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
-        setError(data.error || 'Failed to update')
+        setError(data?.message || data?.error || 'Failed to update')
         return
       }
 
-      alert('Updated successfully')
+      navigate('/cancellation')
     } catch (err) {
       setError('Failed to update')
     }
@@ -87,8 +110,13 @@ const CancellationPolicyEdit = () => {
       </CCardHeader>
       <CCardBody>
         {error && <CAlert color="danger">{error}</CAlert>}
+        {loading && (
+          <div className="text-center py-4">
+            <CSpinner color="primary" />
+          </div>
+        )}
 
-        <CForm onSubmit={handleSubmit}>
+        <CForm onSubmit={handleSubmit} style={{ display: loading ? 'none' : 'block' }}>
           <CFormInput
             label="Policy Name"
             className="mb-3"
@@ -105,12 +133,35 @@ const CancellationPolicyEdit = () => {
             onChange={(e) => handleChange('description', e.target.value)}
           />
 
-          <CFormTextarea
-            label="Policy Rules"
-            rows={5}
+          <CFormInput
+            type="number"
+            min={0}
+            max={100}
+            step="0.01"
+            label="Deduction Percentage"
             className="mb-3"
-            value={form.rules}
-            onChange={(e) => handleChange('rules', e.target.value)}
+            value={form.deduction_percentage}
+            onChange={(e) => handleChange('deduction_percentage', e.target.value)}
+            required
+          />
+
+          <CFormInput
+            type="number"
+            min={0}
+            label="Refund Window (Days)"
+            className="mb-3"
+            value={form.refund_window_days}
+            onChange={(e) => handleChange('refund_window_days', e.target.value)}
+            required
+          />
+
+          <CFormInput
+            label="Applies On Booking Status"
+            className="mb-3"
+            value={form.applies_on_booking_status}
+            onChange={(e) => handleChange('applies_on_booking_status', e.target.value)}
+            placeholder="cancelled,expired"
+            required
           />
 
           <div className="d-flex justify-content-end mt-2">

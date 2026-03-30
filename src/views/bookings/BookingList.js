@@ -1,433 +1,44 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import CIcon from '@coreui/icons-react'
-import {
-  cilBan,
-  cilCheckCircle,
-  cilChevronLeft,
-  cilChevronRight,
-  cilCloudUpload,
-  cilFilter,
-  cilFilterX,
-  cilMagnifyingGlass,
-  cilPlus,
-  cilReload,
-  cilTrash,
-  cilX,
-  cilXCircle,
-} from '@coreui/icons'
-import {
-  CAlert,
-  CBadge,
-  CCard,
-  CCardBody,
-  CCardHeader,
-  CCollapse,
-  CCol,
-  CFormInput,
-  CFormSelect,
-  CFormTextarea,
-  CModal,
-  CModalBody,
-  CModalFooter,
-  CModalHeader,
-  CRow,
-  CSpinner,
-  CTable,
-  CTableBody,
-  CTableDataCell,
-  CTableHead,
-  CTableHeaderCell,
-  CTableRow,
-} from '@coreui/react'
+import { cilFilter, cilFilterX, cilPlus } from '@coreui/icons'
+import { CAlert, CBadge, CCard, CCardBody, CCardHeader, CSpinner } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import IconOnlyButton from '../../components/IconOnlyButton'
-
-const INITIAL_FILTERS = {
-  search: '',
-  property_id: '',
-  booking_status: '',
-  checkin_from: '',
-  checkin_to: '',
-}
-
-const DOCUMENT_TYPE_OPTIONS = [
-  { value: 'aadhaar', label: 'Aadhaar' },
-  { value: 'voter_id', label: 'Voter ID' },
-  { value: 'pan', label: 'PAN' },
-  { value: 'driving_license', label: 'Driving License' },
-
-]
-
-const createUploadPerson = (overrides = {}) => ({
-  person_name: '',
-  relation: '',
-  document_type: 'id_proof',
-  note: '',
-  files: [],
-  ...overrides,
-})
-
-const revokePersonFilePreviews = (people = []) => {
-  people.forEach((person) => {
-    ;(person?.files || []).forEach((fileItem) => {
-      if (fileItem?.preview) {
-        URL.revokeObjectURL(fileItem.preview)
-      }
-    })
-  })
-}
-
-const normalizeFileUrls = (source) => {
-  const raw = []
-  if (Array.isArray(source?.files)) raw.push(...source.files)
-  if (Array.isArray(source?.images)) raw.push(...source.images)
-  if (Array.isArray(source?.image_urls)) raw.push(...source.image_urls)
-  if (Array.isArray(source?.document_urls)) raw.push(...source.document_urls)
-  if (Array.isArray(source?.attachments)) raw.push(...source.attachments)
-  if (source?.file_url) raw.push(source.file_url)
-  if (source?.image_url) raw.push(source.image_url)
-  if (source?.url) raw.push(source.url)
-
-  return raw
-    .map((item) => {
-      if (typeof item === 'string') return item
-      if (!item || typeof item !== 'object') return ''
-      return item.url || item.file_url || item.image_url || item.path || ''
-    })
-    .filter(Boolean)
-}
-
-const normalizeUploadedDocuments = (payload) => {
-  const list = extractArray(payload)
-  const normalized = []
-
-  list.forEach((item, index) => {
-    const basePersonName =
-      item?.person_name ||
-      item?.guest_name ||
-      item?.name ||
-      item?.person?.name ||
-      `Person ${index + 1}`
-
-    if (Array.isArray(item?.documents) && item.documents.length > 0) {
-      item.documents.forEach((doc, docIdx) => {
-        normalized.push({
-          document_id: doc?.document_id || doc?.id || `${index}-${docIdx}`,
-          person_name: doc?.person_name || basePersonName,
-          relation: doc?.relation || item?.relation || '',
-          document_type: doc?.document_type || doc?.type || item?.document_type || 'other',
-          note: doc?.note || doc?.remark || doc?.description || item?.note || '',
-          file_urls: normalizeFileUrls(doc),
-          uploaded_at: doc?.created_at || doc?.uploaded_at || item?.created_at || '',
-        })
-      })
-      return
-    }
-
-    normalized.push({
-      document_id: item?.document_id || item?.id || `${index}`,
-      person_name: basePersonName,
-      relation: item?.relation || '',
-      document_type: item?.document_type || item?.type || 'other',
-      note: item?.note || item?.remark || item?.description || '',
-      file_urls: normalizeFileUrls(item),
-      uploaded_at: item?.created_at || item?.uploaded_at || '',
-    })
-  })
-
-  return normalized
-}
-
-const extractArray = (payload) => {
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload?.rows)) return payload.rows
-  if (Array.isArray(payload?.results)) return payload.results
-  if (Array.isArray(payload?.bookings)) return payload.bookings
-  return []
-}
-
-const extractObject = (payload) => {
-  if (!payload) return null
-  if (Array.isArray(payload)) return payload[0] || null
-  if (payload?.data && !Array.isArray(payload.data) && typeof payload.data === 'object') {
-    return payload.data
-  }
-  if (payload?.booking && typeof payload.booking === 'object') return payload.booking
-  return payload
-}
-
-const normalizeStatus = (value) =>
-  String(value || '')
-    .trim()
-    .toLowerCase()
-
-const formatStatusLabel = (value) => {
-  const text = String(value || '')
-    .replace(/_/g, ' ')
-    .trim()
-  if (!text) return '-'
-  return text
-    .split(' ')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
-}
-
-const parseDateValue = (value) => {
-  if (!value) return null
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value
-  }
-
-  const text = String(value).trim()
-  if (!text) return null
-
-  const dmyMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-  if (dmyMatch) {
-    const day = Number(dmyMatch[1])
-    const month = Number(dmyMatch[2])
-    const year = Number(dmyMatch[3])
-    const date = new Date(year, month - 1, day)
-    if (
-      date.getFullYear() === year &&
-      date.getMonth() === month - 1 &&
-      date.getDate() === day
-    ) {
-      return date
-    }
-    return null
-  }
-
-  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (isoMatch) {
-    const year = Number(isoMatch[1])
-    const month = Number(isoMatch[2])
-    const day = Number(isoMatch[3])
-    const date = new Date(year, month - 1, day)
-    if (
-      date.getFullYear() === year &&
-      date.getMonth() === month - 1 &&
-      date.getDate() === day
-    ) {
-      return date
-    }
-    return null
-  }
-
-  const date = new Date(text)
-  if (Number.isNaN(date.getTime())) return null
-  return date
-}
-
-const toDateOnly = (value) => {
-  const date = parseDateValue(value)
-  if (!date) return null
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
-}
-
-const normalizeDateFilterValue = (value) => {
-  const date = parseDateValue(value)
-  if (!date) return value
-  return date.toLocaleDateString('en-GB')
-}
-
-const formatDate = (value) => {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '-'
-  return date.toLocaleDateString('en-GB')
-}
-
-const formatDateTime = (value) => {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '-'
-  return date.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-const toNumber = (value, fallback = 0) => {
-  const num = Number(value)
-  return Number.isFinite(num) ? num : fallback
-}
-
-const formatCurrency = (value) => {
-  const amount = toNumber(value, 0)
-  return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-const inDateRange = (value, from, to) => {
-  if (!from && !to) return true
-  const current = toDateOnly(value)
-  if (!current) return false
-
-  const start = toDateOnly(from)
-  const end = toDateOnly(to)
-  if (start && current < start) return false
-  if (end && current > end) return false
-  return true
-}
-
-const getBookingId = (booking) => booking?.booking_id || booking?.id || booking?.bookingId
-
-const getBookingCode = (booking) =>
-  booking?.booking_code ||
-  booking?.booking_no ||
-  booking?.booking_number ||
-  booking?.reference_no ||
-  booking?.reference ||
-  '-'
-
-const getGuestName = (booking) =>
-  booking?.user?.full_name ||
-  booking?.guest?.full_name ||
-  booking?.guest_name ||
-  booking?.customer_name ||
-  booking?.full_name ||
-  '-'
-
-const getGuestPhone = (booking) =>
-  booking?.user?.phone || booking?.guest?.phone || booking?.phone || booking?.mobile || '-'
-
-const getPropertyId = (booking) =>
-  booking?.property_id || booking?.property?.property_id || booking?.property?.id || ''
-
-const getPropertyName = (booking, propertyMap) =>
-  booking?.property?.property_name ||
-  booking?.property_name ||
-  propertyMap[getPropertyId(booking)] ||
-  '-'
-
-const getBookingStatus = (booking) => normalizeStatus(booking?.booking_status || booking?.status)
-
-const getPaymentStatus = (booking) =>
-  normalizeStatus(booking?.payment_status || booking?.payment?.status || booking?.paymentStatus)
-
-const getCheckinDate = (booking) =>
-  booking?.checkin_date || booking?.check_in || booking?.start_date || booking?.from_date || ''
-
-const getCheckoutDate = (booking) =>
-  booking?.checkout_date || booking?.check_out || booking?.end_date || booking?.to_date || ''
-
-const getCreatedAt = (booking) =>
-  booking?.created_at || booking?.createdAt || booking?.booking_date || booking?.date || ''
-
-const getUpdatedAt = (booking) =>
-  booking?.audit?.updated_at || booking?.updated_at || booking?.updatedAt || ''
-
-const getCreatedAuditAt = (booking) => booking?.audit?.created_at || getCreatedAt(booking)
-
-const getStayNightsValue = (booking) => {
-  const apiStayNights = Number(booking?.stay_nights)
-  if (Number.isFinite(apiStayNights) && apiStayNights >= 0) return apiStayNights
-  return getStayNights(booking) ?? 0
-}
-
-const getPaymentTotalAmount = (booking) =>
-  toNumber(booking?.payment_summary?.total_amount || booking?.total_amount || getGrandTotal(booking), 0)
-
-const getTaxAmount = (booking) =>
-  toNumber(
-    booking?.payment_summary?.total_tax_amount ??
-      booking?.pricing_summary?.tax_amount ??
-      booking?.tax_amount ??
-      booking?.total_tax_amount,
-    0,
-  )
-
-const getPaymentTotalPaid = (booking) => {
-  if (booking?.payment_summary?.total_paid !== undefined) {
-    return toNumber(booking.payment_summary.total_paid, 0)
-  }
-
-  if (Array.isArray(booking?.payments) && booking.payments.length > 0) {
-    return booking.payments.reduce((sum, payment) => sum + toNumber(payment?.amount, 0), 0)
-  }
-
-  return 0
-}
-
-const getPaymentOutstanding = (booking) => {
-  if (booking?.payment_summary?.outstanding_amount !== undefined) {
-    return toNumber(booking.payment_summary.outstanding_amount, 0)
-  }
-  return Math.max(0, getPaymentTotalAmount(booking) - getPaymentTotalPaid(booking))
-}
-
-const getBookingSource = (booking) => booking?.source || booking?.booking_source || '-'
-
-const getBookingNotes = (booking) => booking?.notes || booking?.note || '-'
-
-const getRoomSummaryRows = (booking) => {
-  if (Array.isArray(booking?.items) && booking.items.length > 0) {
-    return booking.items.map((item, idx) => ({
-      key: `item-${item.item_id || idx}`,
-      roomType: item?.room_type?.room_type_name || item?.room_type_name || item?.room_type_id || '-',
-      qty: toNumber(item?.quantity || item?.qty, 0),
-      unitPrice: toNumber(item?.unit_price || item?.price_per_night, 0),
-      amount: toNumber(item?.amount || item?.subtotal, 0),
-    }))
-  }
-
-  if (Array.isArray(booking?.pricing_summary?.breakup) && booking.pricing_summary.breakup.length > 0) {
-    return booking.pricing_summary.breakup.map((item, idx) => ({
-      key: `breakup-${item.room_type_id || idx}-${idx}`,
-      roomType: item?.room_type_name || item?.room_type_id || '-',
-      qty: toNumber(item?.qty, 0),
-      unitPrice: toNumber(item?.price_per_night, 0),
-      amount: toNumber(item?.subtotal, 0),
-    }))
-  }
-
-  return []
-}
-
-const getStayNights = (booking) => {
-  const checkin = toDateOnly(getCheckinDate(booking))
-  const checkout = toDateOnly(getCheckoutDate(booking))
-  if (!checkin || !checkout) return null
-
-  const msPerDay = 24 * 60 * 60 * 1000
-  return Math.max(0, Math.round((checkout.getTime() - checkin.getTime()) / msPerDay))
-}
-
-const getGuestCount = (booking) =>
-  toNumber(booking?.num_guests || booking?.guests || booking?.guest_count, 0)
-
-const getPersonLabel = (booking) => {
-  const guestCount = getGuestCount(booking)
-  const guestName = getGuestName(booking)
-  const baseName = guestName === '-' ? 'Guest' : guestName
-  if (guestCount > 1) return `${baseName} + ${guestCount - 1}`
-  return baseName
-}
-
-const getGrandTotal = (booking) =>
-  toNumber(
-    booking?.pricing_summary?.grand_total ||
-      booking?.pricing?.grand_total ||
-      booking?.pricing_summary?.total_price ||
-      booking?.total_amount ||
-      booking?.total_price,
-    0,
-  )
-
-const getStatusColor = (status) => {
-  const normalized = normalizeStatus(status)
-  if (!normalized) return 'secondary'
-  if (['accepted', 'confirmed', 'checked_in', 'active', 'success'].includes(normalized))
-    return 'success'
-  if (['pending', 'hold', 'awaiting_payment'].includes(normalized)) return 'warning'
-  if (['cancelled', 'rejected', 'failed', 'refunded'].includes(normalized)) return 'danger'
-  if (['checked_out', 'completed', 'done', 'paid'].includes(normalized)) return 'info'
-  return 'secondary'
-}
+import BookingListFilters from './components/BookingListFilters'
+import BookingTable from './components/BookingTable'
+import BookingPagination from './components/BookingPagination'
+import BookingDetailsModal from './components/modals/BookingDetailsModal'
+import BookingUploadModal from './components/modals/BookingUploadModal'
+import BookingRefundModal from './components/modals/BookingRefundModal'
+import BookingCancelModal from './components/modals/BookingCancelModal'
+import {
+  INITIAL_FILTERS,
+  CUSTOM_POLICY_VALUE,
+  createUploadPerson,
+  revokePersonFilePreviews,
+  normalizeUploadedDocuments,
+  extractArray,
+  extractObject,
+  normalizeStatus,
+  normalizeDateFilterValue,
+  inDateRange,
+  getBookingId,
+  getBookingCancellationPolicyId,
+  getBookingCode,
+  getGuestName,
+  getGuestPhone,
+  getPropertyId,
+  getPropertyName,
+  getBookingStatus,
+  getPaymentStatus,
+  getCheckinDate,
+  getCreatedAt,
+  getTaxAmount,
+  getGrandTotal,
+  toNumber,
+  calculateCancellationAmounts,
+  formatCurrency,
+} from './bookingListUtils'
 
 const BookingList = () => {
   const auth = useAuth()
@@ -438,6 +49,8 @@ const BookingList = () => {
 
   const [bookings, setBookings] = useState([])
   const [properties, setProperties] = useState([])
+  const [cancellationPolicies, setCancellationPolicies] = useState([])
+  const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -446,10 +59,11 @@ const BookingList = () => {
   const [actionState, setActionState] = useState({ bookingId: null, action: '' })
 
   const [filters, setFilters] = useState(INITIAL_FILTERS)
-  const [sortField, setSortField] = useState('checkin_date')
-  const [sortDir, setSortDir] = useState('asc')
+  const [sortField, setSortField] = useState('created_at')
+  const [sortDir, setSortDir] = useState('desc')
   const [page, setPage] = useState(1)
   const [showFilters, setShowFilters] = useState(true)
+  const [activeListTab, setActiveListTab] = useState('all')
   const perPage = 10
 
   const [detailsVisible, setDetailsVisible] = useState(false)
@@ -468,6 +82,22 @@ const BookingList = () => {
   const [cancelBooking, setCancelBooking] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelReasonError, setCancelReasonError] = useState('')
+
+  const [refundVisible, setRefundVisible] = useState(false)
+  const [refundBooking, setRefundBooking] = useState(null)
+  const [refundLoading, setRefundLoading] = useState(false)
+  const [refundError, setRefundError] = useState('')
+  const [refundContext, setRefundContext] = useState(null)
+  const [refundEligibility, setRefundEligibility] = useState(null)
+  const [refundPolicyId, setRefundPolicyId] = useState('')
+  const [refundAppliedCancellation, setRefundAppliedCancellation] = useState(null)
+  const [refundAmountTouched, setRefundAmountTouched] = useState(false)
+  const [refundForm, setRefundForm] = useState({
+    payment_id: '',
+    refund_amount: '',
+    custom_deduction_percentage: '',
+    refund_reason: 'Guest cancelled',
+  })
 
   const loadBookings = useCallback(async () => {
     try {
@@ -505,15 +135,56 @@ const BookingList = () => {
     }
   }, [API_BASE, auth])
 
+  const loadCancellationPolicies = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/cancellation-policies?_page=1&_perPage=100`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...auth.getAuthHeader(),
+        },
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setCancellationPolicies([])
+        return []
+      }
+      const items = extractArray(data)
+      setCancellationPolicies(items)
+      return items
+    } catch (err) {
+      console.error('Failed to load cancellation policies:', err)
+      setCancellationPolicies([])
+      return []
+    }
+  }, [API_BASE, auth])
+
+  const loadUsers = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/users?_page=1&_perPage=500`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...auth.getAuthHeader(),
+        },
+      })
+      const data = await res.json().catch(() => null)
+      if (res.ok) {
+        setUsers(extractArray(data))
+      }
+    } catch (err) {
+      console.error('Failed to load users:', err)
+      setUsers([])
+    }
+  }, [API_BASE, auth])
+
   useEffect(() => {
     const bootstrap = async () => {
       setLoading(true)
       setError('')
-      await Promise.all([loadBookings(), loadProperties()])
+      await Promise.all([loadBookings(), loadProperties(), loadCancellationPolicies(), loadUsers()])
       setLoading(false)
     }
     bootstrap()
-  }, [loadBookings, loadProperties])
+  }, [loadBookings, loadProperties, loadCancellationPolicies, loadUsers])
 
   const propertyMap = useMemo(() => {
     const map = {}
@@ -525,6 +196,18 @@ const BookingList = () => {
     })
     return map
   }, [properties])
+
+  const userMap = useMemo(() => {
+    const map = {}
+    users.forEach((user) => {
+      const id = user?.user_id || user?.id
+      const name = user?.full_name || user?.name || user?.user_name || ''
+      if (id && name) {
+        map[String(id)] = name
+      }
+    })
+    return map
+  }, [users])
 
   const uniqueBookingStatuses = useMemo(() => {
     const statuses = new Set()
@@ -543,34 +226,38 @@ const BookingList = () => {
     return count
   }, [bookings])
 
-  const uploadedDocumentsByPerson = useMemo(() => {
-    const grouped = {}
-    uploadedDocuments.forEach((doc) => {
-      const personName = doc.person_name || 'Person'
-      if (!grouped[personName]) grouped[personName] = []
-      grouped[personName].push(doc)
+  const cancelledBookingsCount = useMemo(() => {
+    let count = 0
+    bookings.forEach((booking) => {
+      if (getBookingStatus(booking) === 'cancelled') count += 1
     })
-    return grouped
-  }, [uploadedDocuments])
+    return count
+  }, [bookings])
 
-  const updateFilter = (field, value) => {
+  const updateFilter = useCallback((field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }))
     setPage(1)
-  }
+  }, [])
 
-  const handleDateFilterBlur = (field, value) => {
-    const normalized = normalizeDateFilterValue(value)
-    if (normalized !== value) {
-      updateFilter(field, normalized)
-    }
-  }
+  const handleDateFilterBlur = useCallback(
+    (field, value) => {
+      const normalized = normalizeDateFilterValue(value)
+      if (normalized !== value) {
+        updateFilter(field, normalized)
+      }
+    },
+    [updateFilter],
+  )
 
-  const resetFilters = () => {
+  const resetFilters = useCallback(() => {
     setFilters(INITIAL_FILTERS)
     setPage(1)
-  }
+  }, [])
 
   const filteredBookings = useMemo(() => {
+    const effectiveBookingStatus =
+      activeListTab === 'cancelled' ? 'cancelled' : filters.booking_status
+
     return bookings.filter((booking) => {
       const bookingStatus = getBookingStatus(booking)
       const paymentStatus = getPaymentStatus(booking)
@@ -581,13 +268,13 @@ const BookingList = () => {
         `${getBookingCode(booking)} ${getGuestName(booking)} ${getGuestPhone(booking)} ${getPropertyName(booking, propertyMap)} ${bookingStatus} ${paymentStatus}`.toLowerCase()
       if (filters.search && !combinedText.includes(filters.search.toLowerCase())) return false
       if (filters.property_id && filters.property_id !== propertyId) return false
-      if (filters.booking_status && normalizeStatus(filters.booking_status) !== bookingStatus)
+      if (effectiveBookingStatus && normalizeStatus(effectiveBookingStatus) !== bookingStatus)
         return false
       if (!inDateRange(checkinDate, filters.checkin_from, filters.checkin_to)) return false
 
       return true
     })
-  }, [bookings, filters, propertyMap])
+  }, [activeListTab, bookings, filters, propertyMap])
 
   const sortedBookings = useMemo(() => {
     const getSortValue = (booking) => {
@@ -602,12 +289,6 @@ const BookingList = () => {
     }
 
     return [...filteredBookings].sort((a, b) => {
-      const pendingPriorityA = getBookingStatus(a) === 'pending' ? 0 : 1
-      const pendingPriorityB = getBookingStatus(b) === 'pending' ? 0 : 1
-      if (pendingPriorityA !== pendingPriorityB) {
-        return pendingPriorityA - pendingPriorityB
-      }
-
       const A = getSortValue(a)
       const B = getSortValue(b)
 
@@ -623,20 +304,38 @@ const BookingList = () => {
 
   const totalPages = Math.max(1, Math.ceil(sortedBookings.length / perPage))
   const safePage = Math.min(page, totalPages)
-  const tableColSpan = showPropertyColumn ? 8 : 7
-
   const paginatedBookings = useMemo(() => {
     return sortedBookings.slice((safePage - 1) * perPage, safePage * perPage)
   }, [sortedBookings, safePage])
 
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortField(field)
-      setSortDir('asc')
-    }
-  }
+  const handleTabChange = useCallback((nextTab) => {
+    setActiveListTab(nextTab)
+    setPage(1)
+  }, [])
+
+  const handlePrevPage = useCallback(() => {
+    setPage(Math.max(1, safePage - 1))
+  }, [safePage])
+
+  const handleNextPage = useCallback(() => {
+    setPage(Math.min(totalPages, safePage + 1))
+  }, [safePage, totalPages])
+
+  const toggleFilters = useCallback(() => {
+    setShowFilters((prev) => !prev)
+  }, [])
+
+  const handleSort = useCallback(
+    (field) => {
+      if (sortField === field) {
+        setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      } else {
+        setSortField(field)
+        setSortDir('asc')
+      }
+    },
+    [sortField],
+  )
 
   const runWithFallback = async (attempts) => {
     let lastMessage = 'Request failed'
@@ -679,7 +378,6 @@ const BookingList = () => {
     try {
       const payload = {
         status,
-        booking_status: status,
         ...extraBody,
       }
 
@@ -945,21 +643,236 @@ const BookingList = () => {
     setActionState({ bookingId: null, action: '' })
   }
 
+  const closeCancelModal = () => {
+    setCancelVisible(false)
+    setCancelBooking(null)
+    setCancelReason('')
+    setCancelReasonError('')
+  }
+
   const openCancelModal = (booking) => {
+    if (cancellationPolicies.length === 0) {
+      loadCancellationPolicies()
+    }
     setCancelBooking(booking)
     setCancelReason('')
     setCancelReasonError('')
     setCancelVisible(true)
   }
 
+  const closeRefundModal = () => {
+    setRefundVisible(false)
+    setRefundBooking(null)
+    setRefundLoading(false)
+    setRefundError('')
+    setRefundContext(null)
+    setRefundEligibility(null)
+    setRefundPolicyId('')
+    setRefundAppliedCancellation(null)
+    setRefundAmountTouched(false)
+    setRefundForm({
+      payment_id: '',
+      refund_amount: '',
+      custom_deduction_percentage: '',
+      refund_reason: 'Guest cancelled',
+    })
+  }
+
+  const handleRefundPolicyChange = (nextPolicyId) => {
+    setRefundPolicyId(nextPolicyId)
+    setRefundAmountTouched(false)
+  }
+
+  const openRefundModal = async (booking) => {
+    const bookingId = getBookingId(booking)
+    if (!bookingId) {
+      setActionError('Invalid booking selected for refund.')
+      return
+    }
+
+    const loadedPolicies =
+      cancellationPolicies.length > 0 ? cancellationPolicies : await loadCancellationPolicies()
+
+    setRefundVisible(true)
+    setRefundBooking(booking)
+    setRefundLoading(true)
+    setRefundError('')
+    setRefundContext(null)
+    setRefundEligibility(null)
+    setRefundPolicyId('')
+    setRefundAppliedCancellation(null)
+    setRefundAmountTouched(false)
+    setRefundForm({
+      payment_id: '',
+      refund_amount: '',
+      custom_deduction_percentage: '',
+      refund_reason: 'Guest cancelled',
+    })
+
+    try {
+      const res = await fetch(`${API_BASE}/bookings/${bookingId}/cancellation-context`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...auth.getAuthHeader(),
+        },
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok || body?.success === false) {
+        throw new Error(body?.message || 'Failed to fetch cancellation context')
+      }
+
+      const payload = body?.data || {}
+      const contextPolicies = Array.isArray(payload?.cancellation_policy_list)
+        ? payload.cancellation_policy_list
+        : []
+      const fallbackPolicyId = String(loadedPolicies?.[0]?.id || '')
+      const defaultPolicyId = String(
+        getBookingCancellationPolicyId(booking) ||
+          contextPolicies?.[0]?.cancellation_policy_id ||
+          fallbackPolicyId ||
+          '',
+      )
+      const sampleCustomPercentage = payload?.custom_cancellation?.sample_deduction_percentage
+      const shouldUseCustom =
+        payload?.custom_cancellation?.enabled === true && !defaultPolicyId && sampleCustomPercentage !== undefined
+
+      setRefundContext(payload)
+      setRefundPolicyId(shouldUseCustom ? CUSTOM_POLICY_VALUE : defaultPolicyId)
+      setRefundForm((prev) => ({
+        ...prev,
+        custom_deduction_percentage:
+          shouldUseCustom && sampleCustomPercentage !== undefined && sampleCustomPercentage !== null
+            ? String(sampleCustomPercentage)
+            : prev.custom_deduction_percentage,
+      }))
+
+      try {
+        const eligibilityRes = await fetch(`${API_BASE}/refunds/eligibility/${bookingId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...auth.getAuthHeader(),
+          },
+        })
+        const eligibilityBody = await eligibilityRes.json().catch(() => ({}))
+        if (!eligibilityRes.ok || eligibilityBody?.success === false) {
+          throw new Error(eligibilityBody?.message || 'Failed to fetch refund eligibility')
+        }
+        setRefundEligibility(eligibilityBody?.data || {})
+      } catch (err) {
+        setRefundEligibility(null)
+        setRefundError(err.message || 'Failed to fetch refund eligibility')
+      }
+    } catch (err) {
+      setRefundError(err.message || 'Failed to fetch cancellation context')
+    } finally {
+      setRefundLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const payments = Array.isArray(refundEligibility?.payments) ? refundEligibility.payments : []
+    if (!payments.length) return
+
+    setRefundForm((prev) => {
+      if (prev.payment_id) return prev
+      const defaultPayment = payments.find((payment) => payment?.can_refund) || payments[0]
+      return {
+        ...prev,
+        payment_id: String(defaultPayment?.payment_id || ''),
+      }
+    })
+  }, [refundEligibility])
+
+  useEffect(() => {
+    const payload = refundContext
+    if (!payload || !refundPolicyId) {
+      setRefundAppliedCancellation(null)
+      return
+    }
+
+    const isCustomPolicy = refundPolicyId === CUSTOM_POLICY_VALUE
+    const policies = Array.isArray(payload?.cancellation_policy_list)
+      ? payload.cancellation_policy_list
+      : []
+    const matched = isCustomPolicy
+      ? null
+      : policies.find(
+        (policy) => String(policy?.cancellation_policy_id) === String(refundPolicyId),
+      )
+
+    setRefundAppliedCancellation(matched || null)
+
+    if (isCustomPolicy && refundAmountTouched) {
+      return
+    }
+
+    const bookingAmount = toNumber(payload?.booking_amount, 0)
+    const appliedCustomRefundAmount =
+      payload?.applied_cancellation?.is_custom === true
+        ? payload?.applied_cancellation?.calculation?.refund_amount
+        : null
+    const policyRefundAmount = isCustomPolicy
+      ? toNumber(
+        appliedCustomRefundAmount ??
+          payload?.custom_cancellation?.sample_calculation?.refund_amount,
+        0,
+      )
+      : toNumber(matched?.calculation?.refund_amount, 0)
+    const payments = Array.isArray(refundEligibility?.payments) ? refundEligibility.payments : []
+    const selectedPayment = payments.find(
+      (payment) => String(payment?.payment_id) === String(refundForm.payment_id),
+    )
+    const paymentRemaining = toNumber(
+      selectedPayment?.calculation?.refundable_remaining_amount,
+      0,
+    )
+    const suggestedAmount =
+      paymentRemaining > 0 && policyRefundAmount > 0
+        ? Math.min(paymentRemaining, policyRefundAmount)
+        : policyRefundAmount > 0
+          ? policyRefundAmount
+          : paymentRemaining
+    const boundedAmount =
+      bookingAmount > 0 && suggestedAmount > bookingAmount
+        ? bookingAmount
+        : suggestedAmount
+
+    setRefundForm((prev) => {
+      const nextRefundAmount = isCustomPolicy && refundAmountTouched
+        ? prev.refund_amount
+        : boundedAmount > 0
+          ? String(boundedAmount)
+          : ''
+      const nextDeduction =
+        isCustomPolicy && !refundAmountTouched
+          ? String(
+            toNumber(
+              payload?.custom_cancellation?.sample_deduction_percentage,
+              0,
+            ),
+          )
+          : prev.custom_deduction_percentage
+      return {
+        ...prev,
+        refund_amount: nextRefundAmount,
+        custom_deduction_percentage: nextDeduction,
+      }
+    })
+  }, [refundContext, refundEligibility, refundForm.payment_id, refundPolicyId, refundAmountTouched])
+
   const submitCancelBooking = async () => {
     if (!cancelBooking) return
 
     const bookingId = getBookingId(cancelBooking)
     if (!bookingId) return
+    let policies = cancellationPolicies
+    if (policies.length === 0) {
+      policies = await loadCancellationPolicies()
+    }
+    const policyId = String(policies?.[0]?.id || '').trim()
     const reason = cancelReason.trim()
-    if (!reason) {
-      setCancelReasonError('Cancellation reason is required.')
+    if (!policyId) {
+      setCancelReasonError('No cancellation policy found. Please create one first.')
       return
     }
     setCancelReasonError('')
@@ -968,9 +881,10 @@ const BookingList = () => {
     setActionSuccess('')
     setActionState({ bookingId, action: 'cancel' })
 
-    const body = {
-      cancellation_reason: reason,
-      reason,
+    const body = { cancellation_policy_id: policyId }
+    if (reason) {
+      body.cancellation_reason = reason
+      body.reason = reason
     }
 
     const result = await updateBookingStatus(bookingId, 'cancelled', body)
@@ -981,20 +895,216 @@ const BookingList = () => {
       return
     }
 
-    setCancelVisible(false)
-    setCancelReason('')
-    setCancelReasonError('')
+    closeCancelModal()
     setActionSuccess('Booking cancelled successfully.')
     await loadBookings()
     setActionState({ bookingId: null, action: '' })
   }
 
-  const detailsRoomRows = getRoomSummaryRows(selectedBooking || {})
-  const detailsGuests = Array.isArray(selectedBooking?.guests) ? selectedBooking.guests : []
-  const detailsDocuments = Array.isArray(selectedBooking?.documents) ? selectedBooking.documents : []
-  const detailsPayments = Array.isArray(selectedBooking?.payments) ? selectedBooking.payments : []
-  const detailsLocks = Array.isArray(selectedBooking?.locks) ? selectedBooking.locks : []
-  const detailsStayNights = selectedBooking ? getStayNightsValue(selectedBooking) : 0
+  const submitRefund = async () => {
+    if (!refundBooking) return
+
+    const bookingId = getBookingId(refundBooking)
+    if (!bookingId) return
+
+    const isCustomPolicy = refundPolicyId === CUSTOM_POLICY_VALUE
+    const cancellationPolicyId = isCustomPolicy ? '' : String(refundPolicyId || '').trim()
+    const paymentId = Number(refundForm.payment_id)
+    let refundAmount = Number(refundForm.refund_amount)
+    const refundReason = refundForm.refund_reason.trim()
+
+    if (!isCustomPolicy && !cancellationPolicyId) {
+      setRefundError('Cancellation policy is required.')
+      return
+    }
+    if (isCustomPolicy && refundContext?.custom_cancellation?.enabled === false) {
+      setRefundError('Custom cancellation is not enabled for this booking.')
+      return
+    }
+    if (!paymentId) {
+      setRefundError('Select a payment for refund.')
+      return
+    }
+    if (!Number.isFinite(refundAmount) || refundAmount <= 0) {
+      setRefundError('Refund amount must be greater than 0.')
+      return
+    }
+    if (!refundReason) {
+      setRefundError('Refund reason is required.')
+      return
+    }
+    if (refundEligibility?.can_refund === false) {
+      const reasons =
+        Array.isArray(refundEligibility?.reasons) && refundEligibility.reasons.length > 0
+          ? refundEligibility.reasons.join(', ')
+          : 'Refund is not allowed for this booking.'
+      setRefundError(reasons)
+      return
+    }
+
+    const payments = Array.isArray(refundEligibility?.payments) ? refundEligibility.payments : []
+    if (!payments.length) {
+      setRefundError('No refundable payment found for this booking.')
+      return
+    }
+    const selectedPayment =
+      payments.find((payment) => String(payment?.payment_id) === String(paymentId)) ||
+      payments[0] ||
+      null
+    const paymentRemaining = toNumber(
+      selectedPayment?.calculation?.refundable_remaining_amount,
+      0,
+    )
+    const paymentAmount = toNumber(
+      selectedPayment?.calculation?.payment_amount ?? selectedPayment?.amount,
+      0,
+    )
+    const bookingAmount = toNumber(refundContext?.booking_amount, 0)
+
+    let deductionPercentage = toNumber(
+      refundAppliedCancellation?.deduction_percentage ??
+        refundAppliedCancellation?.calculation?.deduction_percentage ??
+        selectedPayment?.calculation?.deduction_percentage,
+      0,
+    )
+    let customDeductionPercentage = null
+    if (isCustomPolicy) {
+      const rawCustom = Number(refundForm.custom_deduction_percentage)
+      if (!Number.isFinite(rawCustom) || rawCustom < 0 || rawCustom > 100) {
+        setRefundError('Deduction percentage must be between 0 and 100.')
+        return
+      }
+      deductionPercentage = Math.max(0, Math.min(100, rawCustom))
+      customDeductionPercentage = deductionPercentage
+      const computedRefundAmount = calculateCancellationAmounts(
+        bookingAmount,
+        deductionPercentage,
+      ).refund_amount
+      if (!Number.isFinite(computedRefundAmount) || computedRefundAmount <= 0) {
+        setRefundError('Refund amount must be greater than 0.')
+        return
+      }
+      if (Number.isFinite(refundAmount) && Math.abs(refundAmount - computedRefundAmount) > 0.01) {
+        setRefundForm((prev) => ({
+          ...prev,
+          refund_amount: String(computedRefundAmount),
+        }))
+      }
+      refundAmount = computedRefundAmount
+    }
+
+    const policyMaxRefundable = calculateCancellationAmounts(
+      paymentAmount || bookingAmount,
+      deductionPercentage,
+    ).refund_amount
+    const effectiveMaxRefundable =
+      paymentRemaining > 0 && policyMaxRefundable > 0
+        ? Math.min(paymentRemaining, policyMaxRefundable)
+        : policyMaxRefundable > 0
+          ? policyMaxRefundable
+          : paymentRemaining
+
+    if (effectiveMaxRefundable > 0 && refundAmount > effectiveMaxRefundable + 0.01) {
+      setRefundError(
+        `Refund amount cannot exceed max refundable amount (${formatCurrency(effectiveMaxRefundable)}).`,
+      )
+      return
+    }
+
+    setRefundError('')
+    setActionError('')
+    setActionSuccess('')
+    setActionState({ bookingId, action: 'refund' })
+
+    try {
+      const currentStatus = getBookingStatus(refundBooking)
+      if (currentStatus !== 'cancelled') {
+        const statusResult = await updateBookingStatus(bookingId, 'cancelled', {
+          ...(isCustomPolicy
+            ? { custom_deduction_percentage: customDeductionPercentage }
+            : { cancellation_policy_id: cancellationPolicyId }),
+        })
+        if (!statusResult.ok) {
+          throw new Error(statusResult.message || 'Failed to apply cancellation policy')
+        }
+      }
+
+      const eligibilityRes = await fetch(`${API_BASE}/refunds/eligibility/${bookingId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...auth.getAuthHeader(),
+        },
+      })
+      const eligibilityBody = await eligibilityRes.json().catch(() => ({}))
+      if (!eligibilityRes.ok || eligibilityBody?.success === false) {
+        throw new Error(eligibilityBody?.message || 'Failed to fetch refund eligibility')
+      }
+
+      const latestEligibility = eligibilityBody?.data || {}
+      setRefundEligibility(latestEligibility)
+      if (latestEligibility?.can_refund === false) {
+        const reasons =
+          Array.isArray(latestEligibility?.reasons) && latestEligibility.reasons.length > 0
+            ? latestEligibility.reasons.join(', ')
+            : 'Refund is not allowed for this booking.'
+        throw new Error(reasons)
+      }
+
+      const latestPayments = Array.isArray(latestEligibility?.payments) ? latestEligibility.payments : []
+      const latestSelectedPayment =
+        latestPayments.find((payment) => String(payment?.payment_id) === String(paymentId)) ||
+        latestPayments[0] ||
+        null
+      const resolvedPaymentId = Number(latestSelectedPayment?.payment_id || paymentId)
+
+      if (!resolvedPaymentId) {
+        throw new Error('No refundable payment found for this booking.')
+      }
+
+      const maxRefundableAmount = toNumber(
+        latestSelectedPayment?.calculation?.refundable_remaining_amount,
+        0,
+      )
+      if (maxRefundableAmount > 0 && refundAmount > maxRefundableAmount) {
+        throw new Error(
+          `Refund amount cannot exceed max refundable amount (${formatCurrency(maxRefundableAmount)}).`,
+        )
+      }
+
+      setRefundForm((prev) => ({
+        ...prev,
+        payment_id: String(resolvedPaymentId),
+      }))
+
+      const payload = {
+        payment_id: resolvedPaymentId,
+        refund_amount: refundAmount,
+        refund_reason: refundReason,
+      }
+
+      const res = await fetch(`${API_BASE}/refunds`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...auth.getAuthHeader(),
+        },
+        body: JSON.stringify(payload),
+      })
+      const body = await res.json().catch(() => ({}))
+
+      if (!res.ok || body?.success === false) {
+        throw new Error(body?.message || 'Failed to create refund')
+      }
+
+      closeRefundModal()
+      setActionSuccess(body?.message || 'Refund created successfully.')
+      await loadBookings()
+    } catch (err) {
+      setRefundError(err.message || 'Failed to create refund')
+    } finally {
+      setActionState({ bookingId: null, action: '' })
+    }
+  }
 
   if (loading) {
     return (
@@ -1020,7 +1130,7 @@ const BookingList = () => {
                 icon={showFilters ? cilFilterX : cilFilter}
                 tone="default"
                 size="sm"
-                onClick={() => setShowFilters((prev) => !prev)}
+                onClick={toggleFilters}
                 label={showFilters ? 'Hide Filters' : 'Show Filters'}
               />
               <IconOnlyButton
@@ -1039,843 +1149,107 @@ const BookingList = () => {
           {actionError && <CAlert color="danger">{actionError}</CAlert>}
           {actionSuccess && <CAlert color="success">{actionSuccess}</CAlert>}
 
-          <CCollapse visible={showFilters}>
-            <CRow className="g-2 mb-3 align-items-end">
-              <CCol lg={2}>
-                <CFormInput
-                  label="Search"
-                  placeholder="Booking, guest, phone..."
-                  value={filters.search}
-                  onChange={(e) => updateFilter('search', e.target.value)}
-                />
-              </CCol>
-              <CCol lg={2}>
-                <CFormSelect
-                  label="Property"
-                  value={filters.property_id}
-                  onChange={(e) => updateFilter('property_id', e.target.value)}
-                >
-                  <option value="">All</option>
-                  {properties.map((property) => {
-                    const id = property?.property_id || property?.id
-                    return (
-                      <option key={id} value={id}>
-                        {property?.property_name || property?.name || `Property ${id}`}
-                      </option>
-                    )
-                  })}
-                </CFormSelect>
-              </CCol>
-              <CCol lg={2}>
-                <CFormSelect
-                  label="Booking Status"
-                  value={filters.booking_status}
-                  onChange={(e) => updateFilter('booking_status', e.target.value)}
-                >
-                  <option value="">All</option>
-                  {uniqueBookingStatuses.map((status) => (
-                    <option key={status} value={status}>
-                      {formatStatusLabel(status)}
-                    </option>
-                  ))}
-                </CFormSelect>
-              </CCol>
-              <CCol lg={2}>
-                <CFormInput
-                  type="text"
-                  inputMode="numeric"
-                  label="Check-in From"
-                  placeholder="DD/MM/YYYY"
-                  maxLength={10}
-                  value={filters.checkin_from}
-                  onChange={(e) => updateFilter('checkin_from', e.target.value)}
-                  onBlur={(e) => handleDateFilterBlur('checkin_from', e.target.value)}
-                />
-              </CCol>
-              <CCol lg={2}>
-                <CFormInput
-                  type="text"
-                  inputMode="numeric"
-                  label="Check-in To"
-                  placeholder="DD/MM/YYYY"
-                  maxLength={10}
-                  value={filters.checkin_to}
-                  onChange={(e) => updateFilter('checkin_to', e.target.value)}
-                  onBlur={(e) => handleDateFilterBlur('checkin_to', e.target.value)}
-                />
-              </CCol>
-              <CCol lg={2} className="d-flex justify-content-end">
-                <IconOnlyButton
-                  icon={cilReload}
-                  tone="default"
-                  size="sm"
-                  onClick={resetFilters}
-                  label="Reset Filters"
-                />
-              </CCol>
-            </CRow>
-          </CCollapse>
+          <BookingListFilters
+            activeListTab={activeListTab}
+            onTabChange={handleTabChange}
+            bookingsCount={bookings.length}
+            cancelledBookingsCount={cancelledBookingsCount}
+            showFilters={showFilters}
+            filters={filters}
+            properties={properties}
+            uniqueBookingStatuses={uniqueBookingStatuses}
+            onFilterChange={updateFilter}
+            onDateBlur={handleDateFilterBlur}
+            onReset={resetFilters}
+          />
 
-          <CTable
-            bordered
-            hover
-            responsive
-            className="text-nowrap"
-            style={{ minWidth: showPropertyColumn ? '1180px' : '1040px' }}
-          >
-            <CTableHead color="dark">
-              <CTableRow>
-                <CTableHeaderCell>#</CTableHeaderCell>
-                <CTableHeaderCell onClick={() => handleSort('booking_code')}>
-                  Booking {sortField === 'booking_code' && (sortDir === 'asc' ? '↑' : '↓')}
-                </CTableHeaderCell>
-                <CTableHeaderCell onClick={() => handleSort('guest_name')}>
-                  No. of Person {sortField === 'guest_name' && (sortDir === 'asc' ? '↑' : '↓')}
-                </CTableHeaderCell>
-                {showPropertyColumn && (
-                  <CTableHeaderCell onClick={() => handleSort('property_name')}>
-                    Property {sortField === 'property_name' && (sortDir === 'asc' ? '↑' : '↓')}
-                  </CTableHeaderCell>
-                )}
-                <CTableHeaderCell onClick={() => handleSort('checkin_date')}>
-                  Stay Dates {sortField === 'checkin_date' && (sortDir === 'asc' ? '↑' : '↓')}
-                </CTableHeaderCell>
-                <CTableHeaderCell onClick={() => handleSort('tax_amount')}>
-                  Tax {sortField === 'tax_amount' && (sortDir === 'asc' ? '↑' : '↓')}
-                </CTableHeaderCell>
-                <CTableHeaderCell onClick={() => handleSort('booking_status')}>
-                  Booking Status {sortField === 'booking_status' && (sortDir === 'asc' ? '↑' : '↓')}
-                </CTableHeaderCell>
-                <CTableHeaderCell>Actions</CTableHeaderCell>
-              </CTableRow>
-            </CTableHead>
+          <BookingTable
+            bookings={paginatedBookings}
+            safePage={safePage}
+            perPage={perPage}
+            showPropertyColumn={showPropertyColumn}
+            sortField={sortField}
+            sortDir={sortDir}
+            onSort={handleSort}
+            activeListTab={activeListTab}
+            propertyMap={propertyMap}
+            onViewDetails={openDetailsModal}
+            onAccept={handleAccept}
+            onUpload={openUploadModal}
+            onRefund={openRefundModal}
+            onCancel={openCancelModal}
+            isActionLoading={isActionLoading}
+          />
 
-            <CTableBody>
-              {paginatedBookings.length === 0 ? (
-                <CTableRow>
-                  <CTableDataCell colSpan={tableColSpan} className="text-center">
-                    No bookings found
-                  </CTableDataCell>
-                </CTableRow>
-              ) : (
-                paginatedBookings.map((booking, index) => {
-                  const bookingId = getBookingId(booking)
-                  const bookingStatus = getBookingStatus(booking)
-                  const stayNights = getStayNights(booking)
-
-                  const hideAcceptButton = [
-                    'accepted',
-                    'confirmed',
-                    'cancelled',
-                    'rejected',
-                  ].includes(bookingStatus)
-                  const isCancelDisabled = [
-                    'cancelled',
-                    'rejected',
-                    'checked_out',
-                    'completed',
-                  ].includes(bookingStatus)
-
-                  return (
-                    <CTableRow key={bookingId || `${index}-${getBookingCode(booking)}`}>
-                      <CTableDataCell>{(safePage - 1) * perPage + index + 1}</CTableDataCell>
-                      <CTableDataCell>{getBookingCode(booking)}</CTableDataCell>
-                      <CTableDataCell>{getPersonLabel(booking)}</CTableDataCell>
-                      {showPropertyColumn && (
-                        <CTableDataCell>{getPropertyName(booking, propertyMap)}</CTableDataCell>
-                      )}
-                      <CTableDataCell>
-                        {formatDate(getCheckinDate(booking))} -{' '}
-                        {formatDate(getCheckoutDate(booking))}
-                        {stayNights !== null ? ` (${stayNights}N)` : ''}
-                      </CTableDataCell>
-                      <CTableDataCell>{formatCurrency(getTaxAmount(booking))}</CTableDataCell>
-                      <CTableDataCell>
-                        <CBadge color={getStatusColor(bookingStatus)}>
-                          {formatStatusLabel(bookingStatus)}
-                        </CBadge>
-                      </CTableDataCell>
-                      <CTableDataCell>
-                        <div className="d-flex flex-wrap gap-1">
-                          <IconOnlyButton
-                            icon={cilMagnifyingGlass}
-                            tone="info"
-                            size="sm"
-                            onClick={() => openDetailsModal(booking)}
-                            label="View Details"
-                          />
-
-                          {!hideAcceptButton && (
-                            <IconOnlyButton
-                              tone="success"
-                              size="sm"
-                              disabled={
-                                isActionLoading(bookingId, 'accept') ||
-                                isActionLoading(bookingId, 'cancel') ||
-                                isActionLoading(bookingId, 'upload')
-                              }
-                              onClick={() => handleAccept(booking)}
-                              label="Accept"
-                            >
-                              {isActionLoading(bookingId, 'accept') ? (
-                                <CSpinner size="sm" />
-                              ) : (
-                                <CIcon icon={cilCheckCircle} />
-                              )}
-                            </IconOnlyButton>
-                          )}
-
-                          <IconOnlyButton
-                            icon={cilCloudUpload}
-                            tone="primary"
-                            size="sm"
-                            disabled={
-                              isActionLoading(bookingId, 'accept') ||
-                              isActionLoading(bookingId, 'cancel') ||
-                              isActionLoading(bookingId, 'upload')
-                            }
-                            onClick={() => openUploadModal(booking)}
-                            label="Upload Document"
-                          />
-
-                          <IconOnlyButton
-                            tone="danger"
-                            size="sm"
-                            disabled={
-                              isCancelDisabled ||
-                              isActionLoading(bookingId, 'accept') ||
-                              isActionLoading(bookingId, 'cancel') ||
-                              isActionLoading(bookingId, 'upload')
-                            }
-                            onClick={() => openCancelModal(booking)}
-                            label="Cancel Booking"
-                          >
-                            {isActionLoading(bookingId, 'cancel') ? (
-                              <CSpinner size="sm" />
-                            ) : (
-                              <CIcon icon={cilXCircle} />
-                            )}
-                          </IconOnlyButton>
-                        </div>
-                      </CTableDataCell>
-                    </CTableRow>
-                  )
-                })
-              )}
-            </CTableBody>
-          </CTable>
-
-          <div className="d-flex justify-content-between mt-3">
-            <IconOnlyButton
-              icon={cilChevronLeft}
-              tone="default"
-              size="sm"
-              disabled={safePage === 1}
-              onClick={() => setPage(Math.max(1, safePage - 1))}
-              label="Previous Page"
-            />
-
-            <span>
-              Page {safePage} of {totalPages}
-            </span>
-
-            <IconOnlyButton
-              icon={cilChevronRight}
-              tone="default"
-              size="sm"
-              disabled={safePage === totalPages}
-              onClick={() => setPage(Math.min(totalPages, safePage + 1))}
-              label="Next Page"
-            />
-          </div>
+          <BookingPagination
+            page={safePage}
+            totalPages={totalPages}
+            onPrev={handlePrevPage}
+            onNext={handleNextPage}
+          />
         </CCardBody>
       </CCard>
 
-      <CModal size="lg" visible={detailsVisible} onClose={() => setDetailsVisible(false)}>
-        <CModalHeader>Booking Details</CModalHeader>
-        <CModalBody>
-          {detailsLoading ? (
-            <div className="text-center py-3">
-              <CSpinner color="primary" />
-            </div>
-          ) : !selectedBooking ? (
-            <p>No booking selected.</p>
-          ) : (
-            <>
-              {detailsError && <CAlert color="warning">{detailsError}</CAlert>}
+      <BookingDetailsModal
+        visible={detailsVisible}
+        onClose={() => setDetailsVisible(false)}
+        loading={detailsLoading}
+        error={detailsError}
+        booking={selectedBooking}
+        propertyMap={propertyMap}
+        userMap={userMap}
+        apiBase={API_BASE}
+      />
 
-              <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-                <div>
-                  <h5 className="mb-1">{getBookingCode(selectedBooking)}</h5>
-                  <div className="small text-medium-emphasis">
-                    Booking ID: {getBookingId(selectedBooking) || '-'} | Source:{' '}
-                    {getBookingSource(selectedBooking)}
-                  </div>
-                </div>
+      <BookingUploadModal
+        visible={uploadVisible}
+        onClose={closeUploadModal}
+        booking={uploadBooking}
+        people={uploadPeople}
+        onAddPerson={addUploadPerson}
+        onRemovePerson={removeUploadPerson}
+        onPersonFieldChange={updateUploadPersonField}
+        onPersonFilesAdd={addUploadPersonFiles}
+        onPersonFileRemove={removeUploadPersonFile}
+        uploadedDocuments={uploadedDocuments}
+        uploadedDocumentsLoading={uploadedDocumentsLoading}
+        uploadedDocumentsError={uploadedDocumentsError}
+        onSubmit={submitDocumentUpload}
+        isActionLoading={isActionLoading}
+      />
 
-                <div className="d-flex flex-wrap gap-2">
-                  <CBadge color={getStatusColor(getBookingStatus(selectedBooking))}>
-                    Booking: {formatStatusLabel(getBookingStatus(selectedBooking))}
-                  </CBadge>
-                  <CBadge color={getStatusColor(getPaymentStatus(selectedBooking))}>
-                    Payment: {formatStatusLabel(getPaymentStatus(selectedBooking))}
-                  </CBadge>
-                </div>
-              </div>
+      <BookingRefundModal
+        visible={refundVisible}
+        onClose={closeRefundModal}
+        booking={refundBooking}
+        loading={refundLoading}
+        error={refundError}
+        cancellationPolicies={cancellationPolicies}
+        policyId={refundPolicyId}
+        onPolicyChange={handleRefundPolicyChange}
+        refundContext={refundContext}
+        appliedCancellation={refundAppliedCancellation}
+        eligibility={refundEligibility}
+        refundForm={refundForm}
+        setRefundForm={setRefundForm}
+        setRefundAmountTouched={setRefundAmountTouched}
+        onSubmit={submitRefund}
+        isActionLoading={isActionLoading}
+        propertyMap={propertyMap}
+      />
 
-              <CRow className="g-2 mb-3">
-                <CCol md={3}>
-                  <div className="border rounded p-2 h-100">
-                    <div className="small text-medium-emphasis">Check-in</div>
-                    <div className="fw-semibold">{formatDate(getCheckinDate(selectedBooking))}</div>
-                  </div>
-                </CCol>
-                <CCol md={3}>
-                  <div className="border rounded p-2 h-100">
-                    <div className="small text-medium-emphasis">Check-out</div>
-                    <div className="fw-semibold">{formatDate(getCheckoutDate(selectedBooking))}</div>
-                  </div>
-                </CCol>
-                <CCol md={3}>
-                  <div className="border rounded p-2 h-100">
-                    <div className="small text-medium-emphasis">Stay</div>
-                    <div className="fw-semibold">{detailsStayNights}N</div>
-                  </div>
-                </CCol>
-                <CCol md={3}>
-                  <div className="border rounded p-2 h-100">
-                    <div className="small text-medium-emphasis">Guests</div>
-                    <div className="fw-semibold">{getGuestCount(selectedBooking)}</div>
-                  </div>
-                </CCol>
-                <CCol md={3}>
-                  <div className="border rounded p-2 h-100">
-                    <div className="small text-medium-emphasis">Total</div>
-                    <div className="fw-semibold">
-                      {formatCurrency(getPaymentTotalAmount(selectedBooking))}
-                    </div>
-                  </div>
-                </CCol>
-                <CCol md={3}>
-                  <div className="border rounded p-2 h-100">
-                    <div className="small text-medium-emphasis">Tax</div>
-                    <div className="fw-semibold">{formatCurrency(getTaxAmount(selectedBooking))}</div>
-                  </div>
-                </CCol>
-                <CCol md={3}>
-                  <div className="border rounded p-2 h-100">
-                    <div className="small text-medium-emphasis">Paid</div>
-                    <div className="fw-semibold">
-                      {formatCurrency(getPaymentTotalPaid(selectedBooking))}
-                    </div>
-                  </div>
-                </CCol>
-                <CCol md={3}>
-                  <div className="border rounded p-2 h-100">
-                    <div className="small text-medium-emphasis">Outstanding</div>
-                    <div className="fw-semibold">
-                      {formatCurrency(getPaymentOutstanding(selectedBooking))}
-                    </div>
-                  </div>
-                </CCol>
-                <CCol md={3}>
-                  <div className="border rounded p-2 h-100">
-                    <div className="small text-medium-emphasis">Updated</div>
-                    <div className="fw-semibold">
-                      {formatDateTime(getUpdatedAt(selectedBooking) || getCreatedAuditAt(selectedBooking))}
-                    </div>
-                  </div>
-                </CCol>
-              </CRow>
-
-              <CRow className="g-2 mb-3">
-                <CCol md={6}>
-                  <div className="border rounded p-2 h-100">
-                    <div className="fw-semibold mb-1">Lead Guest</div>
-                    <div>
-                      <strong>Name:</strong>{' '}
-                      {selectedBooking?.user?.full_name || getGuestName(selectedBooking)}
-                    </div>
-                    <div>
-                      <strong>Phone:</strong> {selectedBooking?.user?.phone || getGuestPhone(selectedBooking)}
-                    </div>
-                    <div>
-                      <strong>Email:</strong> {selectedBooking?.user?.email || '-'}
-                    </div>
-                  </div>
-                </CCol>
-                <CCol md={6}>
-                  <div className="border rounded p-2 h-100">
-                    <div className="fw-semibold mb-1">Property</div>
-                    <div>
-                      <strong>Name:</strong> {getPropertyName(selectedBooking, propertyMap)}
-                    </div>
-                    <div>
-                      <strong>Code:</strong> {selectedBooking?.property?.property_code || '-'}
-                    </div>
-                    <div>
-                      <strong>Location:</strong>{' '}
-                      {[selectedBooking?.property?.city, selectedBooking?.property?.state]
-                        .filter(Boolean)
-                        .join(', ') || '-'}
-                    </div>
-                    <div>
-                      <strong>Address:</strong> {selectedBooking?.property?.address || '-'}
-                    </div>
-                  </div>
-                </CCol>
-              </CRow>
-
-              {getBookingNotes(selectedBooking) !== '-' && (
-                <div className="border rounded p-2 mb-3">
-                  <div className="fw-semibold mb-1">Notes</div>
-                  <div>{getBookingNotes(selectedBooking)}</div>
-                </div>
-              )}
-
-              {detailsRoomRows.length > 0 && (
-                <>
-                  <h6 className="mb-2">Room Summary</h6>
-                  <CTable small bordered responsive className="mb-3">
-                    <CTableHead>
-                      <CTableRow>
-                        <CTableHeaderCell>Room Type</CTableHeaderCell>
-                        <CTableHeaderCell>Qty</CTableHeaderCell>
-                        <CTableHeaderCell>Unit/Night</CTableHeaderCell>
-                        <CTableHeaderCell>Amount</CTableHeaderCell>
-                      </CTableRow>
-                    </CTableHead>
-                    <CTableBody>
-                      {detailsRoomRows.map((row) => (
-                        <CTableRow key={row.key}>
-                          <CTableDataCell>{row.roomType}</CTableDataCell>
-                          <CTableDataCell>{row.qty}</CTableDataCell>
-                          <CTableDataCell>{formatCurrency(row.unitPrice)}</CTableDataCell>
-                          <CTableDataCell>{formatCurrency(row.amount)}</CTableDataCell>
-                        </CTableRow>
-                      ))}
-                    </CTableBody>
-                  </CTable>
-                </>
-              )}
-
-              {detailsGuests.length > 0 && (
-                <>
-                  <h6 className="mb-2">Guest List</h6>
-                  <CTable small bordered responsive className="mb-3">
-                    <CTableHead>
-                      <CTableRow>
-                        <CTableHeaderCell>Name</CTableHeaderCell>
-                        <CTableHeaderCell>Phone</CTableHeaderCell>
-                        <CTableHeaderCell>Email</CTableHeaderCell>
-                        <CTableHeaderCell>ID Proof</CTableHeaderCell>
-                      </CTableRow>
-                    </CTableHead>
-                    <CTableBody>
-                      {detailsGuests.map((guest, idx) => (
-                        <CTableRow key={`guest-${guest.guest_id || idx}`}>
-                          <CTableDataCell>{guest?.guest_name || '-'}</CTableDataCell>
-                          <CTableDataCell>{guest?.guest_phone || '-'}</CTableDataCell>
-                          <CTableDataCell>{guest?.guest_email || '-'}</CTableDataCell>
-                          <CTableDataCell>{guest?.id_proof_type || '-'}</CTableDataCell>
-                        </CTableRow>
-                      ))}
-                    </CTableBody>
-                  </CTable>
-                </>
-              )}
-
-              {detailsDocuments.length > 0 && (
-                <>
-                  <h6 className="mb-2">Documents</h6>
-                  <CTable small bordered responsive className="mb-3">
-                    <CTableHead>
-                      <CTableRow>
-                        <CTableHeaderCell>Person</CTableHeaderCell>
-                        <CTableHeaderCell>Relation</CTableHeaderCell>
-                        <CTableHeaderCell>Type</CTableHeaderCell>
-                        <CTableHeaderCell>Note</CTableHeaderCell>
-                        <CTableHeaderCell>Files</CTableHeaderCell>
-                      </CTableRow>
-                    </CTableHead>
-                    <CTableBody>
-                      {detailsDocuments.map((doc, idx) => {
-                        const fileUrls = normalizeFileUrls(doc)
-                        return (
-                          <CTableRow key={`doc-${doc.document_id || idx}`}>
-                            <CTableDataCell>{doc?.person_name || '-'}</CTableDataCell>
-                            <CTableDataCell>{doc?.relation || '-'}</CTableDataCell>
-                            <CTableDataCell>{formatStatusLabel(doc?.document_type)}</CTableDataCell>
-                            <CTableDataCell>{doc?.note || '-'}</CTableDataCell>
-                            <CTableDataCell>
-                              {fileUrls.length === 0 ? (
-                                <span className="text-medium-emphasis">No files</span>
-                              ) : (
-                                <div className="d-flex flex-wrap gap-2">
-                                  {fileUrls.map((url, fileIndex) => (
-                                    <a
-                                      key={`${doc.document_id || idx}-${fileIndex}`}
-                                      href={url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                    >
-                                      File {fileIndex + 1}
-                                    </a>
-                                  ))}
-                                </div>
-                              )}
-                            </CTableDataCell>
-                          </CTableRow>
-                        )
-                      })}
-                    </CTableBody>
-                  </CTable>
-                </>
-              )}
-
-              {detailsPayments.length > 0 && (
-                <>
-                  <h6 className="mb-2">Payments</h6>
-                  <CTable small bordered responsive className="mb-3">
-                    <CTableHead>
-                      <CTableRow>
-                        <CTableHeaderCell>Mode</CTableHeaderCell>
-                        <CTableHeaderCell>Amount</CTableHeaderCell>
-                        <CTableHeaderCell>Tax</CTableHeaderCell>
-                        <CTableHeaderCell>Status</CTableHeaderCell>
-                        <CTableHeaderCell>Transaction ID</CTableHeaderCell>
-                        <CTableHeaderCell>Time</CTableHeaderCell>
-                      </CTableRow>
-                    </CTableHead>
-                    <CTableBody>
-                      {detailsPayments.map((payment, idx) => (
-                        <CTableRow key={`payment-${payment.payment_id || idx}`}>
-                          <CTableDataCell>{payment?.payment_mode || payment?.provider || '-'}</CTableDataCell>
-                          <CTableDataCell>{formatCurrency(payment?.amount)}</CTableDataCell>
-                          <CTableDataCell>{formatCurrency(payment?.tax_amount)}</CTableDataCell>
-                          <CTableDataCell>
-                            <CBadge color={getStatusColor(payment?.status)}>
-                              {formatStatusLabel(payment?.status)}
-                            </CBadge>
-                          </CTableDataCell>
-                          <CTableDataCell>{payment?.transaction_id || '-'}</CTableDataCell>
-                          <CTableDataCell>{formatDateTime(payment?.created_at)}</CTableDataCell>
-                        </CTableRow>
-                      ))}
-                    </CTableBody>
-                  </CTable>
-                </>
-              )}
-
-              {detailsLocks.length > 0 && (
-                <>
-                  <h6 className="mb-2">Inventory Locks</h6>
-                  <CTable small bordered responsive className="mb-3">
-                    <CTableHead>
-                      <CTableRow>
-                        <CTableHeaderCell>Date</CTableHeaderCell>
-                        <CTableHeaderCell>Room Type</CTableHeaderCell>
-                        <CTableHeaderCell>Units</CTableHeaderCell>
-                        <CTableHeaderCell>Locked Until</CTableHeaderCell>
-                      </CTableRow>
-                    </CTableHead>
-                    <CTableBody>
-                      {detailsLocks.map((lock, idx) => (
-                        <CTableRow key={`lock-${lock.lock_id || idx}`}>
-                          <CTableDataCell>{formatDate(lock?.lock_date)}</CTableDataCell>
-                          <CTableDataCell>{lock?.room_type?.room_type_name || lock?.room_type_id || '-'}</CTableDataCell>
-                          <CTableDataCell>{toNumber(lock?.units_locked, 0)}</CTableDataCell>
-                          <CTableDataCell>{formatDateTime(lock?.locked_until)}</CTableDataCell>
-                        </CTableRow>
-                      ))}
-                    </CTableBody>
-                  </CTable>
-                </>
-              )}
-
-              {selectedBooking?.audit && (
-                <div className="border rounded p-2 small">
-                  <div className="fw-semibold mb-1">Audit</div>
-                  <div>
-                    <strong>Created:</strong> {formatDateTime(selectedBooking.audit.created_at)} |{' '}
-                    <strong>Updated:</strong> {formatDateTime(selectedBooking.audit.updated_at)}
-                  </div>
-                  <div>
-                    <strong>Created By:</strong> {selectedBooking.audit.created_by || '-'} |{' '}
-                    <strong>Updated By:</strong> {selectedBooking.audit.updated_by || '-'}
-                  </div>
-                  <div>
-                    <strong>IP:</strong> {selectedBooking.audit.ip_address || '-'}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </CModalBody>
-        <CModalFooter>
-          <IconOnlyButton
-            icon={cilX}
-            tone="default"
-            label="Close Details"
-            onClick={() => setDetailsVisible(false)}
-          />
-        </CModalFooter>
-      </CModal>
-
-      <CModal size="lg" visible={uploadVisible} onClose={closeUploadModal}>
-        <CModalHeader>Upload Booking Documents</CModalHeader>
-        <CModalBody>
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <div>
-              <strong>Booking:</strong> {uploadBooking ? getBookingCode(uploadBooking) : '-'}
-            </div>
-            <IconOnlyButton
-              icon={cilPlus}
-              tone="primary"
-              size="sm"
-              label="Add Person"
-              onClick={addUploadPerson}
-            />
-          </div>
-
-          {uploadPeople.map((person, personIndex) => (
-            <div key={`person-${personIndex}`} className="border rounded p-3 mb-3">
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <h6 className="mb-0">Person {personIndex + 1}</h6>
-                {uploadPeople.length > 1 && (
-                  <IconOnlyButton
-                    icon={cilTrash}
-                    tone="danger"
-                    size="sm"
-                    label="Remove Person"
-                    onClick={() => removeUploadPerson(personIndex)}
-                  />
-                )}
-              </div>
-
-              <CRow className="g-2">
-                <CCol md={4}>
-                  <CFormInput
-                    label="Person Name"
-                    placeholder="Enter person name"
-                    value={person.person_name}
-                    onChange={(e) =>
-                      updateUploadPersonField(personIndex, 'person_name', e.target.value)
-                    }
-                  />
-                </CCol>
-                <CCol md={4}>
-                  <CFormInput
-                    label="Relation (optional)"
-                    placeholder="Relation with guest"
-                    value={person.relation}
-                    onChange={(e) =>
-                      updateUploadPersonField(personIndex, 'relation', e.target.value)
-                    }
-                  />
-                </CCol>
-                <CCol md={4}>
-                  <CFormSelect
-                    label="Document Type"
-                    value={person.document_type}
-                    onChange={(e) =>
-                      updateUploadPersonField(personIndex, 'document_type', e.target.value)
-                    }
-                  >
-                    {DOCUMENT_TYPE_OPTIONS.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </CFormSelect>
-                </CCol>
-              </CRow>
-
-              <CFormInput
-                type="file"
-                multiple
-                accept="image/*"
-                className="mt-2"
-                label="Upload Images"
-                onChange={(e) => addUploadPersonFiles(personIndex, e)}
-              />
-
-              <CFormInput
-                label="Note (optional)"
-                className="mt-2"
-                placeholder="Add note for this person's documents"
-                value={person.note}
-                onChange={(e) => updateUploadPersonField(personIndex, 'note', e.target.value)}
-              />
-
-              {person.files.length > 0 && (
-                <>
-                  <div className="small text-medium-emphasis mt-2 mb-1">
-                    Selected Images ({person.files.length})
-                  </div>
-                  <CRow className="g-2">
-                    {person.files.map((fileItem, fileIndex) => (
-                      <CCol md={3} key={`${personIndex}-${fileIndex}`}>
-                        <div className="border rounded p-2 h-100">
-                          <img
-                            src={fileItem.preview}
-                            alt="preview"
-                            style={{
-                              width: '100%',
-                              height: 120,
-                              objectFit: 'cover',
-                              borderRadius: 6,
-                            }}
-                          />
-                          <div
-                            className="small text-truncate mt-1"
-                            title={fileItem.file?.name || `file-${fileIndex + 1}`}
-                          >
-                            {fileItem.file?.name || `file-${fileIndex + 1}`}
-                          </div>
-                          <IconOnlyButton
-                            icon={cilTrash}
-                            tone="danger"
-                            size="sm"
-                            className="w-100 mt-1"
-                            label="Remove File"
-                            onClick={() => removeUploadPersonFile(personIndex, fileIndex)}
-                          />
-                        </div>
-                      </CCol>
-                    ))}
-                  </CRow>
-                </>
-              )}
-            </div>
-          ))}
-
-          <hr />
-          <h6>Uploaded Images</h6>
-
-          {uploadedDocumentsLoading ? (
-            <div className="text-center py-2">
-              <CSpinner color="primary" />
-            </div>
-          ) : uploadedDocumentsError ? (
-            <CAlert color="warning" className="mb-0">
-              {uploadedDocumentsError}
-            </CAlert>
-          ) : uploadedDocuments.length === 0 ? (
-            <p className="text-medium-emphasis mb-0">
-              No uploaded documents found for this booking.
-            </p>
-          ) : (
-            Object.entries(uploadedDocumentsByPerson).map(([personName, docs]) => (
-              <div key={personName} className="border rounded p-2 mb-2">
-                <div className="fw-semibold mb-2">{personName}</div>
-                {docs.map((doc, docIndex) => (
-                  <div key={`${doc.document_id}-${docIndex}`} className="mb-2">
-                    <div className="small text-medium-emphasis mb-1">
-                      {formatStatusLabel(doc.document_type)}
-                      {doc.relation ? ` | ${doc.relation}` : ''}
-                      {doc.note ? ` | ${doc.note}` : ''}
-                    </div>
-                    {doc.file_urls.length > 0 ? (
-                      <CRow className="g-2">
-                        {doc.file_urls.map((url, urlIndex) => (
-                          <CCol md={2} key={`${doc.document_id}-${urlIndex}`}>
-                            <img
-                              src={url}
-                              alt="uploaded"
-                              style={{
-                                width: '100%',
-                                height: 90,
-                                objectFit: 'cover',
-                                borderRadius: 6,
-                                border: '1px solid #ddd',
-                              }}
-                            />
-                          </CCol>
-                        ))}
-                      </CRow>
-                    ) : (
-                      <small className="text-medium-emphasis">No images in this document.</small>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ))
-          )}
-        </CModalBody>
-        <CModalFooter>
-          <IconOnlyButton
-            icon={cilX}
-            tone="default"
-            label="Close Upload Modal"
-            onClick={closeUploadModal}
-          />
-          <IconOnlyButton
-            tone="primary"
-            onClick={submitDocumentUpload}
-            disabled={
-              !uploadBooking ||
-              isActionLoading(getBookingId(uploadBooking), 'upload') ||
-              isActionLoading(getBookingId(uploadBooking), 'accept') ||
-              isActionLoading(getBookingId(uploadBooking), 'cancel')
-            }
-            label="Upload Documents"
-          >
-            {uploadBooking && isActionLoading(getBookingId(uploadBooking), 'upload') ? (
-              <CSpinner size="sm" />
-            ) : (
-              <CIcon icon={cilCloudUpload} />
-            )}
-          </IconOnlyButton>
-        </CModalFooter>
-      </CModal>
-
-      <CModal visible={cancelVisible} onClose={() => setCancelVisible(false)}>
-        <CModalHeader>Cancel Booking</CModalHeader>
-        <CModalBody>
-          <p className="mb-2">
-            Booking: <strong>{cancelBooking ? getBookingCode(cancelBooking) : '-'}</strong>
-          </p>
-          {cancelReasonError && (
-            <CAlert color="warning" className="mb-2">
-              {cancelReasonError}
-            </CAlert>
-          )}
-          <CFormTextarea
-            label="Cancellation Reason"
-            rows={3}
-            placeholder="Enter cancellation reason"
-            value={cancelReason}
-            onChange={(e) => setCancelReason(e.target.value)}
-          />
-        </CModalBody>
-        <CModalFooter>
-          <IconOnlyButton
-            icon={cilX}
-            tone="default"
-            label="Close Cancel Modal"
-            onClick={() => setCancelVisible(false)}
-          />
-          <IconOnlyButton
-            tone="danger"
-            onClick={submitCancelBooking}
-            disabled={
-              !cancelBooking ||
-              !cancelReason.trim() ||
-              isActionLoading(getBookingId(cancelBooking), 'cancel') ||
-              isActionLoading(getBookingId(cancelBooking), 'accept') ||
-              isActionLoading(getBookingId(cancelBooking), 'upload')
-            }
-            label="Confirm Cancel Booking"
-          >
-            {cancelBooking && isActionLoading(getBookingId(cancelBooking), 'cancel') ? (
-              <CSpinner size="sm" />
-            ) : (
-              <CIcon icon={cilBan} />
-            )}
-          </IconOnlyButton>
-        </CModalFooter>
-      </CModal>
+      <BookingCancelModal
+        visible={cancelVisible}
+        onClose={closeCancelModal}
+        booking={cancelBooking}
+        cancelReason={cancelReason}
+        onCancelReasonChange={setCancelReason}
+        cancelReasonError={cancelReasonError}
+        cancellationPolicies={cancellationPolicies}
+        onSubmit={submitCancelBooking}
+        isActionLoading={isActionLoading}
+        propertyMap={propertyMap}
+      />
     </>
   )
 }

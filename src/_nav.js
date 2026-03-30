@@ -11,10 +11,14 @@ import {
   cilPlus,
   cilLockLocked,
   cilCreditCard,
+  cilReload,
   cilHome,        // for Property
   cilBed,  
   cilSun,       // for Rooms
-  cilBan
+  cilBan,
+  cilDescription,
+  cilEnvelopeClosed,
+  cilImage
 } from '@coreui/icons'
 import { CNavGroup, CNavItem, CNavTitle } from '@coreui/react'
 
@@ -77,6 +81,12 @@ const _nav = [
     
       {
         component: CNavItem,
+        name: 'Room Type Masters',
+        to: '/room-type-masters',
+        icon: <CIcon icon={cilLibraryBuilding} customClassName="nav-icon" />,
+      },
+      {
+        component: CNavItem,
         name: 'Manage Room Types',
         to: '/room-types',
         icon: <CIcon icon={cilLibraryBuilding} customClassName="nav-icon" />,
@@ -121,17 +131,56 @@ const _nav = [
     to: '/booking-locks',
     icon: <CIcon icon={cilLockLocked} customClassName="nav-icon" />,
   },
+  {
+    component: CNavItem,
+    name: 'Room Inventory',
+    to: '/room-inventory',
+    icon: <CIcon icon={cilBed} customClassName="nav-icon" />,
+  },
 
   // PAYMENTS
   {
     component: CNavTitle,
-    name: 'Payments',
+    name: 'Payments & Refunds',
   },
   {
     component: CNavItem,
     name: 'Payments',
     to: '/payments',
     icon: <CIcon icon={cilCreditCard} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
+    name: 'Refunds',
+    to: '/refunds',
+    icon: <CIcon icon={cilReload} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavTitle,
+    name: 'Reporting',
+  },
+  {
+    component: CNavItem,
+    name: 'Reports',
+    to: '/reports',
+    icon: <CIcon icon={cilDescription} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavTitle,
+    name: 'Website Settings',
+  },
+  {
+    component: CNavItem,
+    name: 'Email Templates',
+    to: '/website-settings/email-templates',
+    icon: <CIcon icon={cilEnvelopeClosed} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
+    name: 'Website Sliders',
+    to: '/website-sliders',
+    roles: ['super_admin'],
+    icon: <CIcon icon={cilImage} customClassName="nav-icon" />,
   },
 ]
 

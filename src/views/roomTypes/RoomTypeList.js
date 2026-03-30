@@ -29,14 +29,12 @@ const RoomTypeList = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Search, sorting, pagination
   const [search, setSearch] = useState('')
   const [sortField, setSortField] = useState('room_type_name')
   const [sortDir, setSortDir] = useState('asc')
   const [page, setPage] = useState(1)
   const perPage = 10
 
-  // Load properties
   const loadProperties = async () => {
     try {
       const res = await fetch(`${API_BASE}/properties?_perPage=500`, {
@@ -49,7 +47,6 @@ const RoomTypeList = () => {
     }
   }
 
-  // Load room types
   const loadRoomTypes = async () => {
     try {
       const res = await fetch(`${API_BASE}/room-types?_perPage=500`, {
@@ -68,7 +65,6 @@ const RoomTypeList = () => {
     Promise.all([loadProperties(), loadRoomTypes()]).finally(() => setLoading(false))
   }, [])
 
-  // Property lookup map
   const propertyMap = useMemo(() => {
     const map = {}
     properties.forEach((p) => {
@@ -79,16 +75,15 @@ const RoomTypeList = () => {
 
   const getPropertyName = (id) => propertyMap[id] || '-'
 
-  // Search
   const filtered = useMemo(() => {
     return roomTypes.filter((rt) => {
-      const text =
-        `${rt.room_type_name} ${rt.room_type_code} ${getPropertyName(rt.property_id)}`.toLowerCase()
+      const text = `${rt.room_type_name} ${rt.room_type_code} ${getPropertyName(
+        rt.property_id,
+      )} ${rt.master_room_type_id || ''}`.toLowerCase()
       return text.includes(search.toLowerCase())
     })
   }, [search, roomTypes, propertyMap])
 
-  // Sort
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
       let A = (a[sortField] || '').toString().toLowerCase()
@@ -97,9 +92,14 @@ const RoomTypeList = () => {
     })
   }, [filtered, sortField, sortDir])
 
-  // Pagination
-  const totalPages = Math.ceil(sorted.length / perPage)
+  const totalPages = Math.max(1, Math.ceil(sorted.length / perPage))
   const paginated = sorted.slice((page - 1) * perPage, page * perPage)
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [page, totalPages])
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -110,7 +110,6 @@ const RoomTypeList = () => {
     }
   }
 
-  // Delete
   const deleteRoomType = async (id) => {
     if (!window.confirm('Delete this room type?')) return
 
@@ -167,6 +166,9 @@ const RoomTypeList = () => {
                 Code {sortField === 'room_type_code' && (sortDir === 'asc' ? '↑' : '↓')}
               </CTableHeaderCell>
 
+              <CTableHeaderCell onClick={() => handleSort('master_room_type_id')}>
+                Master ID {sortField === 'master_room_type_id' && (sortDir === 'asc' ? '↑' : '↓')}
+              </CTableHeaderCell>
               <CTableHeaderCell>Property</CTableHeaderCell>
               <CTableHeaderCell>Occupancy</CTableHeaderCell>
               <CTableHeaderCell>Qty</CTableHeaderCell>
@@ -179,7 +181,7 @@ const RoomTypeList = () => {
           <CTableBody>
             {paginated.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan={8} className="text-center">
+                <CTableDataCell colSpan={9} className="text-center">
                   No room types found
                 </CTableDataCell>
               </CTableRow>
@@ -189,6 +191,7 @@ const RoomTypeList = () => {
                   <CTableDataCell>{(page - 1) * perPage + index + 1}</CTableDataCell>
                   <CTableDataCell>{rt.room_type_name}</CTableDataCell>
                   <CTableDataCell>{rt.room_type_code || '-'}</CTableDataCell>
+                  <CTableDataCell>{rt.master_room_type_id || '-'}</CTableDataCell>
                   <CTableDataCell>{getPropertyName(rt.property_id)}</CTableDataCell>
                   <CTableDataCell>
                     {rt.base_occupancy} / {rt.max_occupancy}
@@ -220,7 +223,6 @@ const RoomTypeList = () => {
           </CTableBody>
         </CTable>
 
-        {/* Pagination */}
         <div className="d-flex justify-content-between mt-3">
           <IconOnlyButton
             icon={cilChevronLeft}

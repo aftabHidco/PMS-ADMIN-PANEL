@@ -70,6 +70,12 @@ const PropertyList = () => {
       .join(', ')
   }
 
+  const isAutoAcceptEnabled = (p) =>
+    p?.auto_accept_enabled === true ||
+    p?.auto_accept_enabled === 1 ||
+    p?.auto_accept_enabled === '1' ||
+    p?.auto_accept_enabled === 'true'
+
   // ------------------------------------------------------------
   // Search
   // ------------------------------------------------------------
@@ -161,6 +167,8 @@ const PropertyList = () => {
               </CTableHeaderCell>
 
               <CTableHeaderCell>Address</CTableHeaderCell>
+              <CTableHeaderCell>Auto Accept</CTableHeaderCell>
+              <CTableHeaderCell>Interval (mins)</CTableHeaderCell>
 
               <CTableHeaderCell>Actions</CTableHeaderCell>
             </CTableRow>
@@ -169,7 +177,7 @@ const PropertyList = () => {
           <CTableBody>
             {paginated.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan={5} className="text-center">
+                <CTableDataCell colSpan={7} className="text-center">
                   No properties found
                 </CTableDataCell>
               </CTableRow>
@@ -182,6 +190,12 @@ const PropertyList = () => {
                   <CTableDataCell>{p.property_code || '-'}</CTableDataCell>
 
                   <CTableDataCell>{buildAddress(p)}</CTableDataCell>
+                  <CTableDataCell>{isAutoAcceptEnabled(p) ? 'ON' : 'OFF'}</CTableDataCell>
+                  <CTableDataCell>
+                    {isAutoAcceptEnabled(p)
+                      ? Number(p?.auto_accept_interval_minutes || 0) || '-'
+                      : '-'}
+                  </CTableDataCell>
 
                   <CTableDataCell>
                     <IconOnlyButton

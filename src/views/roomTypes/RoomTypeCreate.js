@@ -19,26 +19,24 @@ import {
 } from '@coreui/react'
 
 import { useAuth } from '../../auth/AuthProvider'
-import { useNavigate } from 'react-router-dom'
 import RoomTypeImages from './RoomTypeImages'
 import RoomTypePricing from './RoomTypePricing'
 import IconOnlyButton from '../../components/IconOnlyButton'
+import { findMasterRoomTypeById, getListData, readJsonSafely } from './roomTypeMasterUtils'
 
 const RoomTypeCreate = () => {
   const auth = useAuth()
-  const navigate = useNavigate()
   const API_BASE = auth.API_BASE
 
-  // TAB STATE
   const [activeTab, setActiveTab] = useState(1)
-
-  // After save → room_type_id is set → Tab2 & 3 unlock
   const [roomTypeId, setRoomTypeId] = useState(null)
 
   const [properties, setProperties] = useState([])
+  const [masterRoomTypes, setMasterRoomTypes] = useState([])
   const [error, setError] = useState('')
 
   const [form, setForm] = useState({
+    master_room_type_id: '',
     property_id: '',
     room_type_code: '',
     room_type_name: '',
@@ -50,16 +48,45 @@ const RoomTypeCreate = () => {
   })
 
   useEffect(() => {
-    fetch(`${API_BASE}/properties?_perPage=500`, {
-      headers: auth.getAuthHeader(),
-    })
-      .then((res) => res.json())
-      .then((data) => setProperties(data.data || data))
-      .catch(() => setError('Failed to load properties'))
+    const loadDropdowns = async () => {
+      try {
+        const [propertiesRes, mastersRes] = await Promise.all([
+          fetch(`${API_BASE}/properties?_perPage=500`, {
+            headers: auth.getAuthHeader(),
+          }),
+          fetch(`${API_BASE}/room-type-masters`, {
+            headers: auth.getAuthHeader(),
+          }),
+        ])
+
+        const [propertiesData, mastersData] = await Promise.all([
+          propertiesRes.json(),
+          readJsonSafely(mastersRes),
+        ])
+
+        setProperties(propertiesData.data || propertiesData)
+        setMasterRoomTypes(getListData(mastersData))
+      } catch (loadError) {
+        setError('Failed to load properties or room type masters')
+      }
+    }
+
+    loadDropdowns()
   }, [])
 
   const handleChange = (key, value) => {
     setForm({ ...form, [key]: value })
+  }
+
+  const handleMasterRoomTypeChange = (value) => {
+    const selectedMaster = findMasterRoomTypeById(masterRoomTypes, value)
+
+    setForm((currentForm) => ({
+      ...currentForm,
+      master_room_type_id: value,
+      base_occupancy: selectedMaster?.base_occupancy ?? '',
+      max_occupancy: selectedMaster?.max_occupancy ?? '',
+    }))
   }
 
   const handleSubmit = async (e) => {
@@ -83,8 +110,7 @@ const RoomTypeCreate = () => {
         return
       }
 
-      // Unlock next tabs
-      setRoomTypeId(data.room_type_id)
+      setRoomTypeId(data.room_type_id || data?.data?.room_type_id || null)
 
       alert('Room Type saved successfully')
     } catch (err) {
@@ -107,7 +133,6 @@ const RoomTypeCreate = () => {
       </CCardHeader>
 
       <CCardBody>
-        {/* TOP NAV TABS */}
         <CNav variant="tabs">
           <CNavItem>
             <CNavLink active={activeTab === 1} onClick={() => setActiveTab(1)}>
@@ -141,12 +166,33 @@ const RoomTypeCreate = () => {
         </CNav>
 
         <CTabContent>
-          {/* TAB 1 — DETAILS */}
           <CTabPane visible={activeTab === 1}>
             {error && <CAlert color="danger">{error}</CAlert>}
 
             <CForm onSubmit={handleSubmit} className="mt-3">
               <CRow className="mb-3">
+                <CCol md={6}>
+                  <CFormSelect
+                    label="Room Type Master"
+                    required
+                    value={form.master_room_type_id}
+                    onChange={(e) => handleMasterRoomTypeChange(e.target.value)}
+                  >
+                    <option value="">Select Room Type Master</option>
+                    {masterRoomTypes.map((master) => {
+                      const masterId =
+                        master.room_type_master_id || master.master_room_type_id || master.id
+
+                      return (
+                        <option key={masterId} value={masterId}>
+                          {master.room_type_name}
+                          {master.room_type_code ? ` (${master.room_type_code})` : ''}
+                        </option>
+                      )
+                    })}
+                  </CFormSelect>
+                </CCol>
+
                 <CCol md={6}>
                   <CFormSelect
                     label="Property"
@@ -162,7 +208,9 @@ const RoomTypeCreate = () => {
                     ))}
                   </CFormSelect>
                 </CCol>
+              </CRow>
 
+              <CRow className="mb-3">
                 <CCol md={6}>
                   <CFormInput
                     label="Room Type Code"
@@ -170,10 +218,8 @@ const RoomTypeCreate = () => {
                     onChange={(e) => handleChange('room_type_code', e.target.value)}
                   />
                 </CCol>
-              </CRow>
 
-              <CRow className="mb-3">
-                <CCol md={12}>
+                <CCol md={6}>
                   <CFormInput
                     label="Room Type Name"
                     value={form.room_type_name}
@@ -237,12 +283,10 @@ const RoomTypeCreate = () => {
             </CForm>
           </CTabPane>
 
-          {/* TAB 2 — IMAGES */}
           <CTabPane visible={activeTab === 2}>
             {roomTypeId && <RoomTypeImages roomTypeId={roomTypeId} />}
           </CTabPane>
 
-          {/* TAB 3 — PRICING */}
           <CTabPane visible={activeTab === 3}>
             {roomTypeId && <RoomTypePricing roomTypeId={roomTypeId} />}
           </CTabPane>

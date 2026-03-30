@@ -31,13 +31,15 @@
     "chart.js": "^4.5.1",
     "classnames": "^2.5.1",
     "core-js": "^3.46.0",
+    "exceljs": "^4.4.0",
     "prop-types": "^15.8.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.10.1",
     "redux": "5.0.1",
-    "simplebar-react": "^3.3.2"
+    "simplebar-react": "^3.3.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.0",

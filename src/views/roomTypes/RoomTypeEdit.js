@@ -25,6 +25,7 @@ import { useParams } from 'react-router-dom'
 import RoomTypeImages from './RoomTypeImages'
 import RoomTypePricing from './RoomTypePricing'
 import IconOnlyButton from '../../components/IconOnlyButton'
+import { findMasterRoomTypeById, getListData, readJsonSafely } from './roomTypeMasterUtils'
 
 const RoomTypeEdit = () => {
   const { id } = useParams()
@@ -35,12 +36,14 @@ const RoomTypeEdit = () => {
   const [roomTypeId] = useState(id)
 
   const [properties, setProperties] = useState([])
+  const [masterRoomTypes, setMasterRoomTypes] = useState([])
   const [propertyName, setPropertyName] = useState('')
   const [roomTypeName, setRoomTypeName] = useState('')
 
   const [error, setError] = useState('')
 
   const [form, setForm] = useState({
+    master_room_type_id: '',
     property_id: '',
     room_type_code: '',
     room_type_name: '',
@@ -51,9 +54,6 @@ const RoomTypeEdit = () => {
     description: '',
   })
 
-  // ---------------------------------------
-  // Load PROPERTIES
-  // ---------------------------------------
   useEffect(() => {
     fetch(`${API_BASE}/properties?_perPage=200`, {
       headers: auth.getAuthHeader(),
@@ -62,52 +62,72 @@ const RoomTypeEdit = () => {
       .then((d) => {
         const props = d.data || d
         setProperties(props)
-
-        // If form already has property id, map the name
-        const found = props.find((p) => p.property_id == form.property_id)
-        if (found) setPropertyName(found.property_name)
       })
-  }, [form.property_id])
+      .catch(() => setError('Failed to load properties'))
+  }, [])
 
-  // ---------------------------------------
-  // Load ROOM TYPE DATA
-  // ---------------------------------------
+  useEffect(() => {
+    const loadMasters = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/room-type-masters`, {
+          headers: auth.getAuthHeader(),
+        })
+
+        const data = await readJsonSafely(res)
+        setMasterRoomTypes(getListData(data))
+      } catch (loadError) {
+        setError('Failed to load room type masters')
+      }
+    }
+
+    loadMasters()
+  }, [])
+
   useEffect(() => {
     fetch(`${API_BASE}/room-types/${id}`, {
       headers: auth.getAuthHeader(),
     })
       .then((r) => r.json())
       .then((d) => {
+        const roomType = d?.data || d
+
         setForm({
-          property_id: d.property_id,
-          room_type_code: d.room_type_code,
-          room_type_name: d.room_type_name,
-          base_occupancy: d.base_occupancy,
-          max_occupancy: d.max_occupancy,
-          qty: d.qty,
-          inventory_mode: d.inventory_mode,
-          description: d.description,
+          master_room_type_id: roomType.master_room_type_id || '',
+          property_id: roomType.property_id,
+          room_type_code: roomType.room_type_code,
+          room_type_name: roomType.room_type_name,
+          base_occupancy: roomType.base_occupancy,
+          max_occupancy: roomType.max_occupancy,
+          qty: roomType.qty,
+          inventory_mode: roomType.inventory_mode || 'static',
+          description: roomType.description,
         })
 
-        setRoomTypeName(d.room_type_name)
-
-        // Try to match property name if properties already loaded
-        const match = properties.find((p) => p.property_id === d.property_id)
-        if (match) setPropertyName(match.property_name)
+        setRoomTypeName(roomType.room_type_name)
       })
       .catch(() => setError('Failed to load room type'))
   }, [])
 
-  // ---------------------------------------
-  // Change Handler
-  // ---------------------------------------
+  useEffect(() => {
+    const found = properties.find((p) => p.property_id == form.property_id)
+    if (found) setPropertyName(found.property_name)
+  }, [form.property_id, properties])
+
   const handleChange = (key, value) => {
     setForm({ ...form, [key]: value })
   }
 
-  // ---------------------------------------
-  // Submit Handler
-  // ---------------------------------------
+  const handleMasterRoomTypeChange = (value) => {
+    const selectedMaster = findMasterRoomTypeById(masterRoomTypes, value)
+
+    setForm((currentForm) => ({
+      ...currentForm,
+      master_room_type_id: value,
+      base_occupancy: selectedMaster?.base_occupancy ?? '',
+      max_occupancy: selectedMaster?.max_occupancy ?? '',
+    }))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -130,7 +150,6 @@ const RoomTypeEdit = () => {
 
       alert('Room Type updated successfully')
 
-      // Update header title live
       const p = properties.find((x) => x.property_id == form.property_id)
       if (p) setPropertyName(p.property_name)
       setRoomTypeName(form.room_type_name)
@@ -149,7 +168,6 @@ const RoomTypeEdit = () => {
       </CCardHeader>
 
       <CCardBody>
-        {/* TABS */}
         <CNav variant="tabs">
           <CNavItem>
             <CNavLink active={activeTab === 1} onClick={() => setActiveTab(1)}>
@@ -171,12 +189,33 @@ const RoomTypeEdit = () => {
         </CNav>
 
         <CTabContent>
-          {/* ---------------- TAB 1: DETAILS ---------------- */}
           <CTabPane visible={activeTab === 1}>
             {error && <CAlert color="danger">{error}</CAlert>}
 
             <CForm onSubmit={handleSubmit} className="mt-3">
               <CRow className="mb-3">
+                <CCol md={6}>
+                  <CFormSelect
+                    label="Room Type Master"
+                    value={form.master_room_type_id}
+                    onChange={(e) => handleMasterRoomTypeChange(e.target.value)}
+                    required
+                  >
+                    <option value="">Select Room Type Master</option>
+                    {masterRoomTypes.map((master) => {
+                      const masterId =
+                        master.room_type_master_id || master.master_room_type_id || master.id
+
+                      return (
+                        <option key={masterId} value={masterId}>
+                          {master.room_type_name}
+                          {master.room_type_code ? ` (${master.room_type_code})` : ''}
+                        </option>
+                      )
+                    })}
+                  </CFormSelect>
+                </CCol>
+
                 <CCol md={6}>
                   <CFormSelect
                     label="Property"
@@ -190,7 +229,9 @@ const RoomTypeEdit = () => {
                     ))}
                   </CFormSelect>
                 </CCol>
+              </CRow>
 
+              <CRow className="mb-3">
                 <CCol md={6}>
                   <CFormInput
                     label="Room Type Code"
@@ -198,10 +239,8 @@ const RoomTypeEdit = () => {
                     onChange={(e) => handleChange('room_type_code', e.target.value)}
                   />
                 </CCol>
-              </CRow>
 
-              <CRow className="mb-3">
-                <CCol md={12}>
+                <CCol md={6}>
                   <CFormInput
                     label="Room Type Name"
                     required
@@ -268,12 +307,10 @@ const RoomTypeEdit = () => {
             </CForm>
           </CTabPane>
 
-          {/* ---------------- TAB 2: IMAGES ---------------- */}
           <CTabPane visible={activeTab === 2}>
             <RoomTypeImages roomTypeId={roomTypeId} />
           </CTabPane>
 
-          {/* ---------------- TAB 3: PRICING ---------------- */}
           <CTabPane visible={activeTab === 3}>
             <RoomTypePricing roomTypeId={roomTypeId} />
           </CTabPane>

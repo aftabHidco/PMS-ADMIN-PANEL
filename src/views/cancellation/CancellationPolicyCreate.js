@@ -2,13 +2,13 @@
 import React, { useState } from 'react'
 import { cilPlus } from '@coreui/icons'
 import {
+  CAlert,
   CCard,
   CCardBody,
   CCardHeader,
   CForm,
   CFormInput,
   CFormTextarea,
-  CAlert,
 } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
@@ -24,8 +24,16 @@ const CancellationPolicyCreate = () => {
   const [form, setForm] = useState({
     name: '',
     description: '',
-    rules: '',
+    deduction_percentage: '',
+    refund_window_days: '',
+    applies_on_booking_status: 'cancelled',
   })
+
+  const parseStatusList = (value) =>
+    String(value || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
 
   const handleChange = (key, value) => {
     setForm({ ...form, [key]: value })
@@ -35,10 +43,17 @@ const CancellationPolicyCreate = () => {
     e.preventDefault()
     setError('')
 
+    const actorId = auth.user?.user_id || auth.user?.id
     const payload = {
-      ...form,
-      created_by: auth.user?.id,
-      ip_address: 'auto', // backend will override
+      name: form.name.trim(),
+      description: form.description.trim(),
+      deduction_percentage: Number(form.deduction_percentage || 0),
+      rules: {
+        refund_window_days: Number(form.refund_window_days || 0),
+        applies_on_booking_status: parseStatusList(form.applies_on_booking_status),
+      },
+      ...(actorId ? { created_by: actorId, updated_by: actorId } : {}),
+      ip_address: 'auto',
     }
 
     try {
@@ -51,10 +66,10 @@ const CancellationPolicyCreate = () => {
         body: JSON.stringify(payload),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
-        setError(data.error || 'Failed to create')
+        setError(data?.message || data?.error || 'Failed to create')
         return
       }
 
@@ -89,12 +104,35 @@ const CancellationPolicyCreate = () => {
             onChange={(e) => handleChange('description', e.target.value)}
           />
 
-          <CFormTextarea
-            label="Policy Rules (JSON / Text)"
-            rows={5}
+          <CFormInput
+            type="number"
+            min={0}
+            max={100}
+            step="0.01"
+            label="Deduction Percentage"
             className="mb-3"
-            value={form.rules}
-            onChange={(e) => handleChange('rules', e.target.value)}
+            value={form.deduction_percentage}
+            onChange={(e) => handleChange('deduction_percentage', e.target.value)}
+            required
+          />
+
+          <CFormInput
+            type="number"
+            min={0}
+            label="Refund Window (Days)"
+            className="mb-3"
+            value={form.refund_window_days}
+            onChange={(e) => handleChange('refund_window_days', e.target.value)}
+            required
+          />
+
+          <CFormInput
+            label="Applies On Booking Status"
+            className="mb-3"
+            value={form.applies_on_booking_status}
+            onChange={(e) => handleChange('applies_on_booking_status', e.target.value)}
+            placeholder="cancelled,expired"
+            required
           />
 
           <div className="d-flex justify-content-end mt-2">

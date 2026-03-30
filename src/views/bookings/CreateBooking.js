@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { cilCart, cilCheck, cilCheckCircle, cilMagnifyingGlass, cilUserPlus } from '@coreui/icons'
 import {
+  CButton,
   CCard,
   CCardHeader,
   CCardBody,
@@ -13,6 +14,7 @@ import {
   CModalHeader,
   CModalBody,
   CModalFooter,
+  CSpinner,
 } from '@coreui/react'
 import { useAuth } from '../../auth/AuthProvider'
 import IconOnlyButton from '../../components/IconOnlyButton'
@@ -25,6 +27,11 @@ const CreateBooking = () => {
   // ---------------- STATE ----------------
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [isSearchingUser, setIsSearchingUser] = useState(false)
+  const [isCreatingUser, setIsCreatingUser] = useState(false)
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false)
+  const [isCreatingBooking, setIsCreatingBooking] = useState(false)
+  const [invoiceUrl, setInvoiceUrl] = useState('')
 
   const [searchPhone, setSearchPhone] = useState('')
   const [user, setUser] = useState(null)
@@ -52,6 +59,25 @@ const CreateBooking = () => {
     phone: '',
   })
   const today = new Date().toISOString().split('T')[0]
+
+  const parseJson = async (res) => {
+    try {
+      return await res.json()
+    } catch (err) {
+      return {}
+    }
+  }
+
+  const resolveErrorMessage = (data, fallback) => data?.message || data?.error || fallback
+  const resolveInvoiceHref = (url) => {
+    if (!url) return ''
+
+    try {
+      return new URL(url, API_BASE).toString()
+    } catch (err) {
+      return ''
+    }
+  }
 
   // ---------------- LOAD PROPERTIES (ROLE BASED) ----------------
   useEffect(() => {
@@ -90,17 +116,30 @@ const CreateBooking = () => {
       return
     }
 
-    const res = await fetch(`${API_BASE}/users/search?q=${searchPhone}`, {
-      headers: auth.getAuthHeader(),
-    })
+    setIsSearchingUser(true)
 
-    const data = await res.json()
+    try {
+      const res = await fetch(`${API_BASE}/users/search?q=${searchPhone}`, {
+        headers: auth.getAuthHeader(),
+      })
 
-    if (data?.data?.length) {
-      setUser(data.data[0])
-    } else {
-      setUserNotFound(true)
-      setNewUser({ phone: searchPhone, full_name: '', email: '' })
+      const data = await parseJson(res)
+
+      if (!res.ok) {
+        setError(resolveErrorMessage(data, 'Failed to search user'))
+        return
+      }
+
+      if (data?.data?.length) {
+        setUser(data.data[0])
+      } else {
+        setUserNotFound(true)
+        setNewUser({ phone: searchPhone, full_name: '', email: '' })
+      }
+    } catch (err) {
+      setError('Unable to search user. Please try again.')
+    } finally {
+      setIsSearchingUser(false)
     }
   }
 
@@ -110,26 +149,34 @@ const CreateBooking = () => {
 
     const password = `${newUser.full_name.split(' ')[0]}@1234`
 
-    const res = await fetch(`${API_BASE}/users`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...auth.getAuthHeader(),
-      },
-      body: JSON.stringify({ ...newUser, password }),
-    })
+    setIsCreatingUser(true)
 
-    const data = await res.json()
+    try {
+      const res = await fetch(`${API_BASE}/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...auth.getAuthHeader(),
+        },
+        body: JSON.stringify({ ...newUser, password }),
+      })
 
-    if (!res.ok) {
-      setError(data.message || 'Failed to create user')
-      return
+      const data = await parseJson(res)
+
+      if (!res.ok) {
+        setError(resolveErrorMessage(data, 'Failed to create user'))
+        return
+      }
+
+      setUser(data.data)
+      setShowUserModal(false)
+      setUserNotFound(false)
+      setSuccess('User created successfully')
+    } catch (err) {
+      setError('Unable to create user. Please try again.')
+    } finally {
+      setIsCreatingUser(false)
     }
-
-    setUser(data.data)
-    setShowUserModal(false)
-    setUserNotFound(false)
-    setSuccess('User created successfully')
   }
 
   // ---------------- LOAD ROOM TYPES ----------------
@@ -168,23 +215,32 @@ const CreateBooking = () => {
       rooms: String(numRooms),
     }).toString()
 
-    const res = await fetch(`${API_BASE}/availability?${query}`, {
-      headers: auth.getAuthHeader(),
-    })
+    setIsCheckingAvailability(true)
 
-    const data = await res.json()
+    try {
+      const res = await fetch(`${API_BASE}/availability?${query}`, {
+        headers: auth.getAuthHeader(),
+      })
 
-    if (!res.ok || !data.success || !data.options?.length) {
-      setError('No rooms available')
-      return
+      const data = await parseJson(res)
+
+      if (!res.ok || !data.success || !data.options?.length) {
+        setError(resolveErrorMessage(data, 'No rooms available'))
+        return
+      }
+
+      setAvailabilityOptions(data.options)
+    } catch (err) {
+      setError('Unable to check availability. Please try again.')
+    } finally {
+      setIsCheckingAvailability(false)
     }
-
-    setAvailabilityOptions(data.options)
   }
 
   // ---------------- CREATE BOOKING ----------------
   const createBooking = async () => {
     setError('')
+    setInvoiceUrl('')
 
     if (!selectedOption) {
       setError('Please select an availability option')
@@ -219,23 +275,46 @@ const CreateBooking = () => {
       },
     }
 
-    const res = await fetch(`http://127.0.0.1:4000/api/bookings`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...auth.getAuthHeader(),
-      },
-      body: JSON.stringify(payload),
-    })
-    const data = await res.json()
+    setIsCreatingBooking(true)
 
-    if (!res.ok || !data?.success) {
-      setError(data?.message || 'Booking failed')
+    try {
+      const res = await fetch(`http://127.0.0.1:4000/api/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...auth.getAuthHeader(),
+        },
+        body: JSON.stringify(payload),
+      })
+      const data = await parseJson(res)
+
+      if (!res.ok || !data?.success) {
+        setError(resolveErrorMessage(data, 'Booking failed'))
+        return
+      }
+
+      const nextInvoiceUrl = data?.data?.invoice_url || data?.invoice_url || ''
+      if (nextInvoiceUrl) {
+        setInvoiceUrl(nextInvoiceUrl)
+      }
+
+      setSuccess('Booking created successfully')
+    } catch (err) {
+      setError('Unable to create booking. Please try again.')
+    } finally {
+      setIsCreatingBooking(false)
+    }
+  }
+
+  const downloadInvoice = () => {
+    const href = resolveInvoiceHref(invoiceUrl)
+
+    if (!href) {
+      setError('Invoice URL is not available')
       return
     }
 
-    const baseUrl = window.location.href.split('#')[0]
-    window.location.replace(`${baseUrl}#/bookings`)
+    window.open(href, '_blank', 'noopener')
   }
 
   // ---------------- UI ----------------
@@ -245,7 +324,6 @@ const CreateBooking = () => {
         <h4>Create Booking</h4>
       </CCardHeader>
       <CCardBody>
-        {error && <CAlert color="danger">{error}</CAlert>}
         {success && <CAlert color="success">{success}</CAlert>}
 
         {/* STEP 1 — USER */}
@@ -265,8 +343,10 @@ const CreateBooking = () => {
               tone="info"
               label="Search User"
               onClick={searchUser}
-              disabled={!!user}
-            />
+              disabled={!!user || isSearchingUser}
+            >
+              {isSearchingUser ? <CSpinner size="sm" /> : null}
+            </IconOnlyButton>
           </CCol>
         </CRow>
 
@@ -375,7 +455,10 @@ const CreateBooking = () => {
               tone="warning"
               label="Check Availability"
               onClick={checkAvailability}
-            />
+              disabled={isCheckingAvailability}
+            >
+              {isCheckingAvailability ? <CSpinner size="sm" /> : null}
+            </IconOnlyButton>
 
             {/* AVAILABILITY OPTIONS */}
             {/* AVAILABILITY OPTIONS WITH PRICE */}
@@ -476,12 +559,34 @@ const CreateBooking = () => {
                   tone="success"
                   label="Book Now"
                   onClick={createBooking}
-                />
+                  disabled={isCreatingBooking}
+                >
+                  {isCreatingBooking ? <CSpinner size="sm" /> : null}
+                </IconOnlyButton>
+              </div>
+            )}
+
+            {invoiceUrl && (
+              <div className="d-flex justify-content-end">
+                <CButton color="primary" variant="outline" className="mt-2" onClick={downloadInvoice}>
+                  Download Invoice
+                </CButton>
               </div>
             )}
           </>
         )}
       </CCardBody>
+
+      {/* ERROR MODAL */}
+      <CModal visible={!!error} onClose={() => setError('')}>
+        <CModalHeader>Error</CModalHeader>
+        <CModalBody>{error}</CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={() => setError('')}>
+            Close
+          </CButton>
+        </CModalFooter>
+      </CModal>
 
       {/* CREATE USER MODAL */}
       <CModal visible={showUserModal} onClose={() => setShowUserModal(false)}>
@@ -505,7 +610,10 @@ const CreateBooking = () => {
             tone="primary"
             label="Create User"
             onClick={createUser}
-          />
+            disabled={isCreatingUser}
+          >
+            {isCreatingUser ? <CSpinner size="sm" /> : null}
+          </IconOnlyButton>
         </CModalFooter>
       </CModal>
     </CCard>

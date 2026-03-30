@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 
 import {
@@ -11,6 +11,8 @@ import {
 } from '@coreui/react'
 
 import { AppSidebarNav } from './AppSidebarNav'
+import { useAuth } from '../auth/AuthProvider'
+import { getUserRole, normalizeRole } from '../utils/auth'
 
 const HIDCO_LOGO_URL = 'https://www.wbhidcoltd.com/assets/frontend/img/logo.jpg'
 
@@ -18,9 +20,36 @@ const HIDCO_LOGO_URL = 'https://www.wbhidcoltd.com/assets/frontend/img/logo.jpg'
 import navigation from '../_nav'
 
 const AppSidebar = () => {
+  const auth = useAuth()
   const dispatch = useDispatch()
   const unfoldable = useSelector((state) => state.sidebarUnfoldable)
   const sidebarShow = useSelector((state) => state.sidebarShow)
+  const userRole = getUserRole(auth.user)
+
+  const navigationItems = useMemo(() => {
+    const filterItems = (items) =>
+      items.reduce((acc, item) => {
+        const allowedRoles = Array.isArray(item.roles) ? item.roles.map(normalizeRole) : null
+        if (allowedRoles && !allowedRoles.includes(userRole)) {
+          return acc
+        }
+
+        if (Array.isArray(item.items)) {
+          const visibleItems = filterItems(item.items)
+          if (!visibleItems.length) {
+            return acc
+          }
+
+          acc.push({ ...item, items: visibleItems })
+          return acc
+        }
+
+        acc.push(item)
+        return acc
+      }, [])
+
+    return filterItems(navigation)
+  }, [userRole])
 
   return (
     <CSidebar
@@ -54,7 +83,7 @@ const AppSidebar = () => {
           onClick={() => dispatch({ type: 'set', sidebarShow: false })}
         />
       </CSidebarHeader>
-      <AppSidebarNav items={navigation} />
+      <AppSidebarNav items={navigationItems} />
       <CSidebarFooter className="border-top d-none d-lg-flex">
         <CSidebarToggler
           onClick={() => dispatch({ type: 'set', sidebarUnfoldable: !unfoldable })}

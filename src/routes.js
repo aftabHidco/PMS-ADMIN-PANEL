@@ -50,6 +50,11 @@ const Modals = React.lazy(() => import('./views/notifications/modals/Modals'))
 const Toasts = React.lazy(() => import('./views/notifications/toasts/Toasts'))
 
 const Widgets = React.lazy(() => import('./views/widgets/Widgets'))
+const ReportsPage = React.lazy(() => import('./views/reports/ReportsPage'))
+const EmailTemplatesPage = React.lazy(() => import('./views/settings/EmailTemplatesPage'))
+const WebsiteSliderList = React.lazy(() => import('./views/websiteSliders/WebsiteSliderList'))
+const WebsiteSliderCreate = React.lazy(() => import('./views/websiteSliders/WebsiteSliderCreate'))
+const WebsiteSliderEdit = React.lazy(() => import('./views/websiteSliders/WebsiteSliderEdit'))
 
 //user
 
@@ -76,6 +81,9 @@ const PropertyCreate = React.lazy(() => import('./views/property/PropertyCreate'
 const PropertyEdit = React.lazy(() => import('./views/property/PropertyEdit'))
 
 //Room Type
+const RoomTypeMasterList = React.lazy(() => import('./views/roomTypes/RoomTypeMasterList'))
+const RoomTypeMasterCreate = React.lazy(() => import('./views/roomTypes/RoomTypeMasterCreate'))
+const RoomTypeMasterEdit = React.lazy(() => import('./views/roomTypes/RoomTypeMasterEdit'))
 const RoomTypeList = React.lazy(() => import('./views/roomTypes/RoomTypeList'))
 const RoomTypeCreate = React.lazy(() => import('./views/roomTypes/RoomTypeCreate'))
 const RoomTypeEdit = React.lazy(() => import('./views/roomTypes/RoomTypeEdit'))
@@ -99,6 +107,9 @@ const CancellationPolicyEdit = React.lazy(
 //BOOKING
 const BookingList = React.lazy(() => import('./views/bookings/BookingList'))
 const CreateBooking = React.lazy(() => import('./views/bookings/CreateBooking'))
+const BookingLocks = React.lazy(() => import('./views/bookingLocks/BookingLocks'))
+const PaymentList = React.lazy(() => import('./views/payments/PaymentList'))
+const RefundList = React.lazy(() => import('./views/payments/RefundList'))
 
 const routes = [
   { path: '/', exact: true, name: 'Home' },
@@ -164,6 +175,9 @@ const routes = [
   { path: '/properties/create', name: 'Create properties', element: PropertyCreate },
   { path: '/properties/:id/edit', name: 'Edit properties', element: PropertyEdit },
   //ROOM TYPE
+  { path: '/room-type-masters', name: 'Room Type Masters', element: RoomTypeMasterList },
+  { path: '/room-type-masters/create', name: 'Create Room Type Master', element: RoomTypeMasterCreate },
+  { path: '/room-type-masters/:id/edit', name: 'Edit Room Type Master', element: RoomTypeMasterEdit },
   { path: '/room-types', name: 'Room Types', element: RoomTypeList },
   { path: '/room-types/create', name: 'Create Room Types', element: RoomTypeCreate },
   { path: '/room-types/:id/edit', name: 'Edit Room Types', element: RoomTypeEdit },
@@ -188,6 +202,19 @@ const routes = [
 
   { path: '/bookings', name: 'Bookings', element: BookingList },
   { path: '/bookings/create', name: 'Create Booking', element: CreateBooking },
+  { path: '/booking-locks', name: 'Booking Locks', element: BookingLocks },
+  { path: '/room-inventory', name: 'Room Inventory', element: BookingLocks },
+  { path: '/payments', name: 'Payments', element: PaymentList },
+  { path: '/refunds', name: 'Refunds', element: RefundList },
+  { path: '/reports', name: 'Reports', element: ReportsPage },
+  {
+    path: '/website-settings/email-templates',
+    name: 'Email Templates',
+    element: EmailTemplatesPage,
+  },
+  { path: '/website-sliders', name: 'Website Sliders', element: WebsiteSliderList },
+  { path: '/website-sliders/create', name: 'Create Website Slider', element: WebsiteSliderCreate },
+  { path: '/website-sliders/:id/edit', name: 'Edit Website Slider', element: WebsiteSliderEdit },
 ]
 
 export default routes
