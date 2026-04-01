@@ -44,6 +44,8 @@ export default defineConfig(() => {
       proxy: {
         // https://vitejs.dev/config/server-options.html
       },
+      host: true,
+      allowedHosts: true
     },
   }
 })
